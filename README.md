@@ -21,16 +21,16 @@
 ##  Product Description
 
 ### Abstract
-Meal prepping is hard, especially for individuals receiving food benefits or financial aid. Properly allocating a monthly income to groceries efficiently can be a daunting task. EasyMeals allows you to enter your monthly food budget and physical goals (e.g., losing weight or building muscle). Using this data, EasyMeals generates a month-long meal plan, including specific grocery lists and fun, satisfying recipes.
+Meal prepping is hard. For any individual receiving food benefits or other financial aid, the idea of properly allocating a portion of their monthly income to groceries as effectively and efficiently as possible may seem like a daunting task. Introducing: EasyMeals – Automate your meal-prepping goals with a personalized AI nutrition expert. This website will allow you to enter the amount of money you allocate to food and groceries each month and select your physical goals (such as losing weight or building muscle) and their extent. Using this information, EasyMeals will create a month-long meal-prepping plan, showing you what groceries to buy, how much of each grocery item you will need, and some fun meals that you can prepare to satisfy your hunger.
 
 ### Goal
-The goal of this project is to allow people to skip the trouble of budgeting and the stress of finding recipes by having it all in one place. It will automatically provide a list of groceries and recipes week-by-week, while factoring in allergies and restrictions to ensure a stress-free experience.
+The goal of this project is to make a website that allows people to skip the trouble of budgeting for food and the stress of finding recipes to prepare, by having it all in one place. It will allow people to enter their monthly food budget and automatically give a list of groceries to buy and recipes of what to cook week by week. It will also ask for food allergies and restrictions to let people be stress-free about what they are eating. Overall, this project would reduce the stress of wondering what you are able to afford and what you are able to make, by laying it all out month by month.
 
 ### Current Practice
 Today, services like *HelloFresh* or *Factor_* provide meal plans, but they are often expensive, use subscription models that don't accept EBT/food stamps, and remove the transparency of where food is sourced.
 
 ### Novelty
-Our approach uses an **AI assistant** to web-scrape products from local grocery stores. This factors in real-time pricing—a feature absent from most competitors—and allows users to cook the meals themselves rather than receiving pre-packaged shipments.
+What makes our approach different is the introduction of an **AI assistant** that will webscrape products from local grocery stores to create specialized meal plans that are applicable to user requests. This approach will factor in the price of the ingredients, which is absent from existing services, and the ability to cook the meals yourself, where services like Factor_ ship the entire meal.
 
 ---
 
