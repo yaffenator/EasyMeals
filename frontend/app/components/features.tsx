@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import ImageWithFallback from "./Figma/ImageWithFallback";
+import ImageWithFallback from "./Figma/imageWithFallback";
 
 export function Features() {
   const benefits = [
