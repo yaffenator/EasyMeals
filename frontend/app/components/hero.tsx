@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import ImageWithFallback from "./Figma/ImageWithFallback";
+import ImageWithFallback from "./Figma/imageWithFallback";
 
 export function Hero() {
   const router = useRouter();

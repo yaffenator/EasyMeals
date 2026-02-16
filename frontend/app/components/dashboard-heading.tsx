@@ -4,8 +4,8 @@ import { Leaf, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function Heading() {
-  const [hasAccount, setHasAccount] = useState(false);
+export default function DashboardHeading() {
+  const [hasAccount, setHasAccount] = useState(true);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -19,12 +19,12 @@ export default function Heading() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
-            <Link
+            {/* <Link
               href="/how-it-works"
               className="text-foreground/80 hover:text-primary transition-colors"
             >
               How It Works
-            </Link>
+            </Link> */}
             <Link
               href="/dashboard"
               className="text-foreground/80 hover:text-primary transition-colors"
