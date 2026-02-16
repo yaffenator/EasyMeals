@@ -1,12 +1,23 @@
 import Heading from "./components/heading";
+import { Hero } from "./components/hero";
+import { OurMission } from "./components/ourMission";
+import { HowItWorks } from "./components/howItWorks";
+import { Features } from "./components/features";
+import { CTA } from "./components/CTA";
+import { Footer } from "./components/footer";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center font-sans">
-      <div className="text-center">
-        <h1 className="text-xl font-bold">EasyMeals</h1>
-        <p className="text-red-500">Healthy meals made easy!</p>
-      </div>
+    <div className="min-h-screen">
+      <Heading />
+      <main>
+        <Hero />
+        <OurMission />
+        <HowItWorks />
+        <Features />
+        <CTA />
+      </main>
+      <Footer />
     </div>
   );
 }
