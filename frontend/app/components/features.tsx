@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import ImageWithFallback from "./Figma/ImageWithFallback";
+import ImageWithFallback from "./Figma/imageWithFallback";
 
 export function Features() {
   const benefits = [
@@ -17,12 +17,11 @@ export function Features() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="order-2 lg:order-1">
             <div className="relative rounded-2xl overflow-hidden shadow-xl">
-              {/* <ImageWithFallback
+              <ImageWithFallback
                 src="https://images.unsplash.com/photo-1576089073624-b5751a8f4de9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYW1pbHklMjBlYXRpbmclMjBkaW5uZXIlMjB0b2dldGhlcnxlbnwxfHx8fDE3Njk3NTEwODJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Family enjoying a meal together"
                 className="w-full h-auto"
-              /> */}
-              <h1>placeholder</h1>
+              />
             </div>
           </div>
 

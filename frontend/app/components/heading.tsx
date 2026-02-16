@@ -1,8 +1,9 @@
 "use client";
 
 import { Leaf, LogOut, User } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import { Link as ScrollLink } from "react-scroll";
+import Link from "next/link";
 
 export default function Heading() {
   const [hasAccount, setHasAccount] = useState(false);
@@ -19,28 +20,49 @@ export default function Heading() {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
-            <Link
-              href="/how-it-works"
-              className="text-foreground/80 hover:text-primary transition-colors"
+            <ScrollLink
+              to="home" // The ID of the target element
+              smooth={true} // Enable smooth scrolling
+              duration={500} // Scroll duration in milliseconds
+              spy={true} // Enable scrollspy (highlights the link when target is active)
+              activeClass="active-link" // CSS class to apply when active
+              offset={-70} // Adjust scroll position (e.g., for fixed headers)
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
-              How It Works
-            </Link>
-            <Link
-              href="/"
-              className="text-foreground/80 hover:text-primary transition-colors"
+              Home
+            </ScrollLink>
+            <ScrollLink
+              to="our-mission" // The ID of the target element
+              smooth={true} // Enable smooth scrolling
+              duration={500} // Scroll duration in milliseconds
+              spy={true} // Enable scrollspy (highlights the link when target is active)
+              activeClass="active-link" // CSS class to apply when active
+              offset={-70} // Adjust scroll position (e.g., for fixed headers)
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
-              Dashboard
-            </Link>
+              Our Mission
+            </ScrollLink>
+            <ScrollLink
+              to="how-it-works"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
+            >
+              How it Works
+            </ScrollLink>
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/signin">
+            <Link href="/signin" className="no-style-link">
               {hasAccount ? (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <button className="p-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
                   Dashboard
                 </button>
               ) : (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                <button className="p-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
                   Create Account / Login
                 </button>
               )}
