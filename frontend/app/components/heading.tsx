@@ -1,7 +1,12 @@
+"use client";
+
 import { Leaf, LogOut, User } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 export default function Heading() {
+  const [hasAccount, setHasAccount] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto px-4">
@@ -20,7 +25,6 @@ export default function Heading() {
             >
               How It Works
             </Link>
-            {/* {isAuthenticated && ( */}
             <Link
               href="/"
               className="text-foreground/80 hover:text-primary transition-colors"
@@ -30,27 +34,17 @@ export default function Heading() {
           </nav>
 
           <div className="flex items-center gap-4">
-            {/* {isAuthenticated ? (
-              <>
-                <div className="hidden md:flex items-center gap-2 text-sm text-foreground/80">
-                  <User className="w-4 h-4" />
-                  <span>{user?.name}</span>
-                </div>
-                <button 
-                  className="text-foreground hover:text-primary"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </button>
-              </>
-            ) : ( */}
             <Link href="/signin">
-              <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                Get Started
-              </button>
+              {hasAccount ? (
+                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  Dashboard
+                </button>
+              ) : (
+                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  Create Account / Login
+                </button>
+              )}
             </Link>
-            {/* )} */}
           </div>
         </div>
       </div>
