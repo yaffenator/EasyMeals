@@ -23,10 +23,11 @@ export default function Home() {
         <Element name="how-it-works" className="">
           <HowItWorks />
         </Element>
-        <Features />
+        <Element name="features" className="">
+          <Features />
+        </Element>
         <CTA />
       </main>
-      <Footer />
     </div>
   );
 }

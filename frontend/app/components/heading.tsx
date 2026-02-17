@@ -32,12 +32,12 @@ export default function Heading() {
               Home
             </ScrollLink>
             <ScrollLink
-              to="our-mission" // The ID of the target element
-              smooth={true} // Enable smooth scrolling
-              duration={500} // Scroll duration in milliseconds
-              spy={true} // Enable scrollspy (highlights the link when target is active)
-              activeClass="active-link" // CSS class to apply when active
-              offset={-70} // Adjust scroll position (e.g., for fixed headers)
+              to="our-mission"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
               className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
               Our Mission
@@ -52,6 +52,17 @@ export default function Heading() {
               className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
               How it Works
+            </ScrollLink>
+            <ScrollLink
+              to="features"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
+            >
+              Features
             </ScrollLink>
           </nav>
 

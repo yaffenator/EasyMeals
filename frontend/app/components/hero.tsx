@@ -41,7 +41,7 @@ export function Hero() {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center p-2 rounded-lg"
                 onClick={() => router.push("/dashboard")}
               >
-                Get Started Free
+                Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
               </button>
             </div>

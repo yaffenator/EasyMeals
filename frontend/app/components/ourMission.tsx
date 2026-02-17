@@ -9,38 +9,42 @@ export function OurMission() {
             Our Mission
           </h2>
           <p className="text-lg leading-relaxed text-foreground/90">
-            At EasyMeals, we're committed to{" "}
+            <strong className="text-primary">Meal prepping is hard. </strong>
+            For anyone receiving food benefits or other financial aid,
+            allocating such income to effectively may seem like a daunting task.
+            At <strong className="text-primary">EasyMeals</strong>, we're
+            committed to{" "}
             <strong className="text-primary">fighting food insecurity</strong>{" "}
             by empowering people to make the most of their grocery budget. We
-            believe everyone deserves access to healthy, delicious meals
-            regardless of their financial situation.
+            believe everyone deserves access to healthy, fitness-driven,
+            gratifying meals regardless of their financial situation.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center hover:cursor-pointer hover:shadow-lg transition-shadow duration-300">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Heart className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl text-primary mb-3">Accessible Nutrition</h3>
             <p className="text-foreground/80">
-              Everyone deserves healthy meals. We make nutritious eating
-              achievable for any budget.
+              Everyone deserves healthy meals that align with their fitness
+              goals. We make nutritious eating achievable for any budget.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center hover:cursor-pointer hover:shadow-lg transition-shadow duration-300">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl text-primary mb-3">Maximize Your Budget</h3>
             <p className="text-foreground/80">
               Our personalized plans help you get the most value from every
-              dollar spent on groceries.
+              dollar spent on groceries, and recommends meals that you'll love.
             </p>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-primary/10 text-center hover:cursor-pointer hover:shadow-lg transition-shadow duration-300">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="w-6 h-6 text-primary" />
             </div>
