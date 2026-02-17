@@ -1,39 +1,43 @@
-import { DollarSign, Calendar, ShoppingCart, ChefHat } from 'lucide-react';
+import { DollarSign, Calendar, ShoppingCart, ChefHat } from "lucide-react";
 
 export function HowItWorks() {
   const steps = [
     {
       icon: DollarSign,
       title: "Set Your Budget",
-      description: "Tell us how much you want to spend on groceries each week."
+      description: "Tell us how much you want to spend on groceries each week.",
     },
     {
       icon: ChefHat,
       title: "Choose Preferences",
-      description: "Select dietary preferences, allergies, and favorite cuisines."
+      description:
+        "Select dietary preferences, allergies, and favorite cuisines.",
     },
     {
       icon: Calendar,
       title: "Get Your Plan",
-      description: "Receive a personalized weekly meal plan with recipes and portions."
+      description:
+        "Receive a personalized weekly meal plan with recipes and portions.",
     },
     {
       icon: ShoppingCart,
       title: "Shop & Cook",
-      description: "Follow the auto-generated shopping list and start cooking!"
-    }
+      description: "Follow the auto-generated shopping list and start cooking!",
+    },
   ];
 
   return (
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl mb-4">How EasyMeals Works</h2>
+          <h2 className="text-3xl md:text-4xl mb-4 text-primary">
+            How EasyMeals Works
+          </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Four simple steps to budget-friendly, delicious meals every week
           </p>
         </div>
-        
+
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, index) => (
             <div key={index} className="relative">

@@ -185,3 +185,8 @@
 html {
   font-size: var(--font-size);
 }
+
+.active-link {
+  text: green;
+  text-decoration: underline;
+}
