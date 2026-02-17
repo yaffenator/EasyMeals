@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Header } from '../../components/Header';
-import { Footer } from '../../components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { ImageWithFallback } from '../../components/figma/ImageWithFallback';
-import { MealPlanWizard, MealPlanData } from '../../components/MealPlanWizard';
+import DashboardHeading from '../components/dashboard-heading';
+import { Footer } from '../components/footer';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import ImageWithFallback from '../components/Figma/imageWithFallback';
+import { MealPlanWizard, MealPlanData } from '../components/MealPlanWizard';
 import Link from 'next/link';
 import { Clock, DollarSign, Users, ChefHat, Calendar } from 'lucide-react';
-import { generateMealPlan, saveMealPlan, loadMealPlan, clearMealPlan, FullMealPlan } from '../../utils/mealPlanGenerator';
+import { generateMealPlan, saveMealPlan, loadMealPlan, clearMealPlan, FullMealPlan } from '../utils/MealPlanGenerator';
 
 export default function Dashboard() {
   const [mealPlan, setMealPlan] = useState<FullMealPlan | null>(null);
@@ -41,7 +41,7 @@ export default function Dashboard() {
   if (!mealPlan) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
-        <Header />
+        <DashboardHeading />
         <main className="container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
@@ -78,7 +78,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
-      <Header />
+      <DashboardHeading />
       <main className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-8">

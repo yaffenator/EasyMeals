@@ -39,6 +39,11 @@ export default function Heading() {
               activeClass="active-link"
               offset={-70}
               className="hover:cursor-pointer hover:text-primary transition-all duration-200"
+              How It Works
+            </Link>
+            <Link
+              href="/dashboard"
+              className="text-foreground/80 hover:text-primary transition-colors"
             >
               Our Mission
             </ScrollLink>
