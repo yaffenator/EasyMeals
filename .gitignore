@@ -1,3 +1,2 @@
 backend/secrets/
-backend/serviceAccountKey.json
 backend/.env
