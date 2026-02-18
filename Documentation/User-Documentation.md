@@ -7,7 +7,7 @@ EasyMeals allows users to make an account and generate a monthly meal plan based
 ## How to Install
 
 *Currently, this website is hosted locally, so there is no public domain to people to access it at. If it was, there wouldn't be a need to install anything. Here are the steps to download its libraries for local hosting:*
-1. Clone the github repo into your IDE. *Our group has used VS code for the project*
+1. Clone the github repo into your IDE. -*Our group has used VS code for the project*-
 2. Navigate to the frontend folder in your terminal
 3. Install the libraries through the terminal command "**npm i**" or "**npm install**"
 4. Step 3 sholuld take 30-60 seconds depending on network speed. After it completes, verify the packages.json file is not empty and has the downloaded dependencies and libraries
@@ -27,7 +27,7 @@ EasyMeals allows users to make an account and generate a monthly meal plan based
 3. Press the "**Generate Meal Plan**" button to get started.
 4. Follow the prompts to continue to generate your meals based on your preferences.
 5. Look over each meal and make sure it doen't conflits with your preferneces
-6. Refesh any unwanted, or conflicting meals *Awaiting Implementation*
+6. Refesh any unwanted, or conflicting meals -*Awaiting Implementation*-
 7. Get cooking!
 
 ## How to Report a Bug
