@@ -33,8 +33,9 @@ export function Hero() {
               </span>
             </h1>
             <p className="text-lg text-muted-foreground">
-              Get personalized weekly meal plans tailored to your budget. Save
-              money, eat healthier, and never wonder "what's for dinner?" again.
+              Get personalized weekly meal plans tailored to your monthly food
+              benefit and fitness goals. Save money, eat healthier, and never
+              wonder "what's for dinner?" again.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
