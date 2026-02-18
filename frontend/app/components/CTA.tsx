@@ -17,8 +17,8 @@ export function CTA() {
           </p>
           <div className="flex justify-center items-center sm:flex-row gap-4 max-w-md mx-auto">
             <button
-              className="p-2 bg-white text-primary hover:bg-white/90 hover:cursor-pointer transition-all duratino-300 flex rounded-lg"
-              onClick={() => router.push("/dashboard")}
+              className="p-2 bg-white text-primary hover:bg-white/90 hover:cursor-pointer transition-all duration-300 flex rounded-lg"
+              onClick={() => router.push("/login")}
             >
               Get Started for Completely Free!
               <ArrowRight className="ml-2 h-5 w-5" />
