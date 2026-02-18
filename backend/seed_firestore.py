@@ -46,7 +46,7 @@ def seed(db: firestore.Client):
         "aliases": ["chicken breasts", "boneless chicken breast", "skinless chicken breast"],
         "category": "meat",
         "defaultUnit": "g",
-        "snapEligibleDefault": True,
+        "snapEligible": True,
 
         # Gemini-estimated pricing (new schema)
         "price": {
@@ -65,7 +65,7 @@ def seed(db: firestore.Client):
         "aliases": ["white rice", "long grain rice"],
         "category": "grains",
         "defaultUnit": "g",
-        "snapEligibleDefault": True,
+        "snapEligible": True,
 
         # Gemini-estimated pricing (new schema)
         "price": {
