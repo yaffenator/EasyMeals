@@ -54,9 +54,6 @@ def seed(db: firestore.Client):
             "currency": "USD",
             "unitQuantity": 1,
             "unit": "lb",
-            "source": "gemini_estimate",
-            "estimatedAt": firestore.SERVER_TIMESTAMP,
-            "confidence": 0.6,
         },
 
         "createdAt": firestore.SERVER_TIMESTAMP,
@@ -76,9 +73,6 @@ def seed(db: firestore.Client):
             "currency": "USD",
             "unitQuantity": 1,
             "unit": "lb",
-            "source": "gemini_estimate",
-            "estimatedAt": firestore.SERVER_TIMESTAMP,
-            "confidence": 0.55,
         },
 
         "createdAt": firestore.SERVER_TIMESTAMP,
