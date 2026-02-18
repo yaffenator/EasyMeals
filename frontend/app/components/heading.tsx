@@ -19,7 +19,7 @@ export default function Heading() {
             <span className="text-xl text-primary">EasyMeals</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex justify-center gap-6">
             <ScrollLink
               to="home" // The ID of the target element
               smooth={true} // Enable smooth scrolling
@@ -39,11 +39,6 @@ export default function Heading() {
               activeClass="active-link"
               offset={-70}
               className="hover:cursor-pointer hover:text-primary transition-all duration-200"
-              How It Works
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-foreground/80 hover:text-primary transition-colors"
             >
               Our Mission
             </ScrollLink>
