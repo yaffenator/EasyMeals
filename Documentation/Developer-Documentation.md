@@ -31,12 +31,111 @@ The layout of our repository is split between two folders:
 
 ## How to Test the Software:
 
-TEXT HERE
+### Prerequisites
+
+Before running tests, ensure the following:
+
+- Python 3.10+ is installed
+- A virtual environment is activated
+- Backend dependencies are installed:
+  - pip install -r requirements.txt **We haven't added a requirements.txt yet but plan to have one in the future**
+- The .env file is configured correctly
+- The Firestore service account key is located in the /secrets directory
+- Internet access is available (required for Firestore and Gemini API interaction)
+
+### Running the Test Suite
+
+From the backend root directory, run:
+
+**pytest**
+
+This command will:
+
+- Automatically discover all test files in the tests/ directory
+- Execute all test cases
+- Display pass/fail results in the terminal
+
+To run a specific test file:
+
+**pytest tests/test_ingredient_service.py**
+
+Tests should not be executed directly using:
+
+python test_file.py
+
+### External Systems
+
+Some tests may interact with external services such as Google Firestore.
+
+To ensure tests run correctly:
+
+- Firestore credentials must be valid
+- The test environment should use a separate database (not production)
+
+Future improvements will include mocking Firestore to prevent modification of live data during testing.
 
 ## How to Add New Tests:
 
-TEXT HERE
+### Test Location
+
+All backend tests must be placed inside:
+
+backend/tests/
+
+Frontend tests must be placed inside:
+
+frontend/tests/
+
+### Naming Convention
+
+All test files must follow this naming pattern:
+
+test_<feature_name>.py
+
+Examples:
+
+test_ingredient_service.py
+test_rating_service.py
+test_meal_diversity.py
+
+### Writing Test Functions
+
+Each test function inside a test file must follow this pattern:
+
+def test_<behavior_being_tested>():
+
+Example:
+
+def test_normalize_name_trims_whitespace():
+    assert normalize_name("  Rice  ") == "rice"
+
+### Test Harness
+
+The backend uses **pytest** as its test harness.
+
+Pytest automatically:
+
+- Discovers test files
+- Executes test cases
+- Reports pass/fail results
+- Provides debugging output
+
+All tests should be run using:
+**pytest**
+
+Tests should **not** be executed directly using python test_file.py
 
 ## How to Build a Release of the Software:
 
-TEXT HERE
+### Pre-Release Steps
+
+Before building a release, developers must:
+
+1. Ensure all tests pass by running:
+     **pytest**
+2. Verify that:
+  - Database seeding works correctly by runnning python3 seed_firestore.py and checking the database to ensure the database was seeded properly with the correct data.
+  - Gemini integration functions properly
+  - Rating service calculations are correct
+3. Confirm that the .env file is configured for the production environment.
+4. Update the version number in the codebase and documentation (if applicable).
