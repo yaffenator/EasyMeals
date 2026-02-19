@@ -18,13 +18,16 @@ The layout of our repository is split between two folders:
 - The "public" folder contains different .png and .svg files that are used globally across the project frontend.
 
 **Backend:**
-- [...]
+- This folder handles all the backend functionality of our website, such as our data handling (and Firestore database connection) and the API communication with our AI model (Gemini).
 
 ## How to Build the Software:
-1. Ensure all dependencies are installed by following steps 1-4 in "How to Install"
-2. While in the frontend directory, run the command "**npm run dev**"
-3. There should be a local host IP in the terminal (typically "localhost:3000" unless it is being used by another background application). Ctrl-click on it to open it in your browser
-4. The software is now built, and the changes you make to the project should immediately appear in your local browser
+1. Ensure that the code editor setup is completed by following all the steps from the "How to Obtain Source Code" section at the top.
+2. Navigate to the frontend folder in your terminal.
+3. Install the libraries through the terminal command "**npm i**" or "**npm install**."
+4. Step 3 should take 30-60 seconds, depending on network speed. After it completes, verify that the packages.json file is not empty and has the downloaded dependencies and libraries.
+5. While in the frontend directory, run the command "**npm run dev**."
+6. There should be a local host IP in the terminal (typically "localhost:3000" unless it is being used by another background application). Ctrl-click on it to open it in your browser.
+7. The software is now built, and the changes you make to the project should immediately appear in your local browser.
 
 ## How to Test the Software:
 
