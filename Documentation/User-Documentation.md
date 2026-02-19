@@ -22,7 +22,7 @@ EasyMeals allows users to make an account and generate a monthly meal plan based
 ## How to Use
 
 *Our website does not currently have user authnetication but will by the time it is due*
-1. If you don't already have an account, make one with the sign up button in the top right, otherwise, login with your credentials.
+1. If you don't already have an account, make one with the sign-up button in the top right; otherwise, log in with your credentials. NOTE: Our authentication system isn't currently up-to-date, so you can skip this step and go to "localhost:3000/dashboard" to view the dashboard without logging in.
 2. Navigate to the dashboard page at the top of the screen.
 3. Press the "**Generate Meal Plan**" button to get started.
 4. Follow the prompts to continue to generate your meals based on your preferences.
