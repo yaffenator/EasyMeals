@@ -1,3 +1,4 @@
 backend/secrets/
-backend/serviceAccountKey.json
 backend/.env
+backend/db/test_ingredient_service.py
+backend/db/__pycache__
