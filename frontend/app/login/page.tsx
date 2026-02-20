@@ -26,7 +26,7 @@ import {
 } from "../components/ui/tabs";
 import { ChefHat, Mail, Lock, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Heading from "../components/heading";
+import LoginHeading from "../components/login-heading";
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +55,7 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-secondary/30 to-secondary/60">
-      <Heading />
+      <LoginHeading />
       <div className="flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           {/* Logo and Branding */}
