@@ -65,19 +65,24 @@ export default function AuthPage() {
             </div>
             <h1 className="text-3xl text-primary mb-2">Welcome to EasyMeals</h1>
             <p className="text-muted-foreground">
-              Your personalized meal planning starts here
+              Your personalized budget meal planning starts here
             </p>
           </div>
 
           {/* Auth Card */}
           <Card className="shadow-lg">
             <CardHeader className="space-y-1 pb-4">
-              <CardTitle className="text-2xl text-center">
+              <CardTitle className="text-primary text-2xl text-center">
                 Get Started
               </CardTitle>
               <CardDescription className="text-center">
-                Sign in to access your meal planner or create a new account
+                Sign in or create a new account to access your personalized meal
+                plans and recipes
               </CardDescription>
+              <p className="text-sm text-center text-muted-foreground">
+                Fields marked with <span className="text-red-800">*</span> are
+                required
+              </p>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login" className="w-full">
@@ -90,9 +95,11 @@ export default function AuthPage() {
                 <TabsContent value="login">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-email">
+                        Email<span className="text-red-800">*</span>
+                      </Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="login-email"
                           type="email"
@@ -103,32 +110,36 @@ export default function AuthPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="login-password">Password</Label>
-                        <button
-                          type="button"
-                          className="text-sm text-primary hover:underline"
-                          onClick={() => {}}
-                        >
-                          Forgot password?
-                        </button>
+                    <div className="flex flex-col justify-center space-y-2">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="login-password">
+                            Password<span className="text-red-800">*</span>
+                          </Label>
+                        </div>
+                        <div className="relative">
+                          <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="login-password"
+                            type="password"
+                            placeholder="••••••••"
+                            className="pl-10"
+                            required
+                          />
+                        </div>
                       </div>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="login-password"
-                          type="password"
-                          placeholder="••••••••"
-                          className="pl-10"
-                          required
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        className="text-sm text-primary hover:underline hover:cursor-pointer"
+                        onClick={() => {}}
+                      >
+                        Forgot password?
+                      </button>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg p-2 hover:cursor-pointer transition-all duration-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Signing in..." : "Sign In"}
@@ -140,9 +151,11 @@ export default function AuthPage() {
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
+                      <Label htmlFor="signup-name">
+                        Full Name<span className="text-red-800">*</span>
+                      </Label>
                       <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <User className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="signup-name"
                           type="text"
@@ -154,9 +167,11 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
+                      <Label htmlFor="signup-email">
+                        Email<span className="text-red-800">*</span>
+                      </Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Mail className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="signup-email"
                           type="email"
@@ -168,9 +183,11 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
+                      <Label htmlFor="signup-password">
+                        Password<span className="text-red-800">*</span>
+                      </Label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="signup-password"
                           type="password"
@@ -186,10 +203,10 @@ export default function AuthPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signup-confirm-password">
-                        Confirm Password
+                        Confirm Password<span className="text-red-800">*</span>
                       </Label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="signup-confirm-password"
                           type="password"
@@ -202,28 +219,11 @@ export default function AuthPage() {
 
                     <button
                       type="submit"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg p-2 hover:cursor-pointer transition-all duration-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Creating account..." : "Create Account"}
                     </button>
-
-                    <p className="text-xs text-center text-muted-foreground mt-4">
-                      By signing up, you agree to our{" "}
-                      <button
-                        type="button"
-                        className="text-primary hover:underline"
-                      >
-                        Terms of Service
-                      </button>{" "}
-                      and{" "}
-                      <button
-                        type="button"
-                        className="text-primary hover:underline"
-                      >
-                        Privacy Policy
-                      </button>
-                    </p>
                   </form>
                 </TabsContent>
               </Tabs>
@@ -231,7 +231,7 @@ export default function AuthPage() {
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
+                  <div className="w-full border-t border-gray-400"></div>
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-card px-2 text-muted-foreground">
@@ -240,9 +240,13 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* Social Login Buttons */}
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" disabled={isLoading}>
+                {/* Google OAuth Login Button */}
+                <button
+                  className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
+                  type="button"
+                  disabled={isLoading}
+                >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -263,7 +267,14 @@ export default function AuthPage() {
                   </svg>
                   Google
                 </button>
-                <button type="button" disabled={isLoading}>
+
+                {/* GitHub OAuth Login Button */}
+
+                <button
+                  className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
+                  type="button"
+                  disabled={isLoading}
+                >
                   <svg
                     className="mr-2 h-4 w-4"
                     fill="currentColor"
@@ -276,14 +287,6 @@ export default function AuthPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Additional Info */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Start planning budget-friendly meals that help you achieve your
-              eating goals
-            </p>
-          </div>
         </div>
       </div>
     </div>
