@@ -39,8 +39,8 @@ export function Hero() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <button
-                className="bg-primary hover:bg-primary/90 text-primary-foreground flex items-center p-2 rounded-lg"
-                onClick={() => router.push("/dashboard")}
+                className="bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground flex items-center p-2 rounded-lg"
+                onClick={() => router.push("/login")}
               >
                 Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />

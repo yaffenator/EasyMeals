@@ -4,9 +4,12 @@ import { Leaf, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { Link as ScrollLink } from "react-scroll";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Heading() {
   const [hasAccount, setHasAccount] = useState(false);
+
+  const router = useRouter();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -67,17 +70,21 @@ export default function Heading() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/signin" className="no-style-link">
-              {hasAccount ? (
-                <button className="p-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Dashboard
-                </button>
-              ) : (
-                <button className="p-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Create Account / Login
-                </button>
-              )}
-            </Link>
+            {hasAccount ? (
+              <button
+                className="p-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-300 text-primary-foreground"
+                onClick={() => router.push("/dashboard")}
+              >
+                Dashboard
+              </button>
+            ) : (
+              <button
+                className="p-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground"
+                onClick={() => router.push("/login")}
+              >
+                Create Account / Login
+              </button>
+            )}
           </div>
         </div>
       </div>
