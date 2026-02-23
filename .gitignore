@@ -1,0 +1,4 @@
+backend/secrets/
+backend/.env
+backend/db/test_ingredient_service.py
+backend/db/__pycache__

@@ -3,12 +3,12 @@ import ImageWithFallback from "./Figma/imageWithFallback";
 
 export function Features() {
   const benefits = [
-    "Reduce food waste with precise portions",
-    "Discover new recipes every week",
+    "Budget-specific meal recommendations",
+    "Health & Fitness goal alignments",
+    "Dietary restrictions accountability",
     "Automatic nutritional information",
+    "Discover new recipes every week",
     "Flexible meal swaps and substitutions",
-    "Print-friendly shopping lists",
-    "Budget tracking and insights",
   ];
 
   return (
@@ -17,21 +17,24 @@ export function Features() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="order-2 lg:order-1">
             <div className="relative rounded-2xl overflow-hidden shadow-xl">
-              {/* <ImageWithFallback
+              <ImageWithFallback
                 src="https://images.unsplash.com/photo-1576089073624-b5751a8f4de9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmYW1pbHklMjBlYXRpbmclMjBkaW5uZXIlMjB0b2dldGhlcnxlbnwxfHx8fDE3Njk3NTEwODJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
                 alt="Family enjoying a meal together"
                 className="w-full h-auto"
-              /> */}
-              <h1>placeholder</h1>
+              />
             </div>
           </div>
 
           <div className="space-y-6 order-1 lg:order-2">
-            <h2 className="text-3xl md:text-4xl">More Than Just Meal Plans</h2>
+            <h2 className="text-3xl md:text-4xl text-gray-700">
+              <span className="text-primary">Features: </span>More Than Just
+              Meal Plans
+            </h2>
             <p className="text-lg text-muted-foreground">
               EasyMeals helps you take control of your food budget without
-              sacrificing quality or flavor. Our smart algorithm considers
-              seasonal ingredients and local prices to maximize your savings.
+              sacrificing quality, flavor, and direction. Our AI-driven system
+              considers local prices to maximize your savings while deliberately
+              choosing meals that match your health & fitness goals.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-4">

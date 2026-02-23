@@ -1,11 +1,15 @@
 "use client";
 
 import { Leaf, LogOut, User } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
+import { Link as ScrollLink } from "react-scroll";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Heading() {
   const [hasAccount, setHasAccount] = useState(false);
+
+  const router = useRouter();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -18,33 +22,69 @@ export default function Heading() {
             <span className="text-xl text-primary">EasyMeals</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
-            <Link
-              href="/how-it-works"
-              className="text-foreground/80 hover:text-primary transition-colors"
+          <nav className="hidden md:flex justify-center gap-6">
+            <ScrollLink
+              to="home" // The ID of the target element
+              smooth={true} // Enable smooth scrolling
+              duration={500} // Scroll duration in milliseconds
+              spy={true} // Enable scrollspy (highlights the link when target is active)
+              activeClass="active-link" // CSS class to apply when active
+              offset={-70} // Adjust scroll position (e.g., for fixed headers)
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
-              How It Works
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-foreground/80 hover:text-primary transition-colors"
+              Home
+            </ScrollLink>
+            <ScrollLink
+              to="our-mission"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
             >
-              Dashboard
-            </Link>
+              Our Mission
+            </ScrollLink>
+            <ScrollLink
+              to="how-it-works"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
+            >
+              How it Works
+            </ScrollLink>
+            <ScrollLink
+              to="features"
+              smooth={true}
+              duration={500}
+              spy={true}
+              activeClass="active-link"
+              offset={-70}
+              className="hover:cursor-pointer hover:text-primary transition-all duration-200"
+            >
+              Features
+            </ScrollLink>
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/signin">
-              {hasAccount ? (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Dashboard
-                </button>
-              ) : (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Create Account / Login
-                </button>
-              )}
-            </Link>
+            {hasAccount ? (
+              <button
+                className="p-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-300 text-primary-foreground"
+                onClick={() => router.push("/dashboard")}
+              >
+                Dashboard
+              </button>
+            ) : (
+              <button
+                className="p-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground"
+                onClick={() => router.push("/login")}
+              >
+                Create Account / Login
+              </button>
+            )}
           </div>
         </div>
       </div>

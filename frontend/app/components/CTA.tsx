@@ -12,15 +12,13 @@ export function CTA() {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center space-y-8">
           <h2 className="text-3xl md:text-4xl">Ready to Start Saving?</h2>
-          <p className="text-lg text-primary-foreground/90">
-            Join thousands of families who are eating better and spending less.
-            Get your first week's meal plan free.
+          <p>
+            Your personalized, budget-friendly meal plan is just a click away.
           </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+          <div className="flex justify-center items-center sm:flex-row gap-4 max-w-md mx-auto">
             <button
-              className="bg-white text-primary hover:bg-white/90 flex"
-              onClick={() => router.push("/dashboard")}
+              className="p-2 bg-white text-primary hover:bg-white/90 hover:cursor-pointer transition-all duration-300 flex rounded-lg"
+              onClick={() => router.push("/login")}
             >
               Get Started for Completely Free!
               <ArrowRight className="ml-2 h-5 w-5" />
