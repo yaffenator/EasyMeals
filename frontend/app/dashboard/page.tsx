@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import ImageWithFallback from '../components/Figma/imageWithFallback';
 import { MealPlanWizard, MealPlanData } from '../components/MealPlanWizard';
 import Link from 'next/link';
-import { Clock, DollarSign, Users, ChefHat, Calendar } from 'lucide-react';
+import { Clock, DollarSign, Users, ChefHat, Calendar, Soup, RefreshCw } from 'lucide-react';
 import { generateMealPlan, saveMealPlan, loadMealPlan, clearMealPlan, FullMealPlan } from '../utils/MealPlanGenerator';
 
 export default function Dashboard() {
@@ -182,12 +182,12 @@ export default function Dashboard() {
                     {meal.day}
                   </Badge>
                 </div>
-                <CardHeader>
+                <CardHeader className="pb-0 pt-0">
                   <CardTitle className="text-xl">{meal.name}</CardTitle>
                   <CardDescription>{meal.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div className="grid grid-cols-4 gap-2 text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>{meal.prepTime}</span>
@@ -200,11 +200,23 @@ export default function Dashboard() {
                       <Users className="w-4 h-4" />
                       <span>{meal.servings} servings</span>
                     </div>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Soup className="w-4 h-4" />
+                        {meal.calories} cal
+                    </div>
                   </div>
-                  <div className="mt-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {meal.calories} cal
-                    </Badge>
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault(); // Prevents the Link from triggering
+                        e.stopPropagation(); // Prevents the click from bubbling up to the Card
+                        console.log("Refreshing meal...");
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-md transition-colors border border-primary/20 hover:cursor-pointer"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Refresh Meal
+                    </button>
                   </div>
                 </CardContent>
               </Card>

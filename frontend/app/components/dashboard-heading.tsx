@@ -39,7 +39,7 @@ export default function DashboardHeading() {
                 /* Profile State */
                 <button className="flex items-center gap-2 p-1.5 px-3 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground">
                   <User className="h-5 w-5" />
-                  <span className="bg-primary">Profile Name</span>
+                  <span className="bg-primary">My Profile</span>
                 </button>
               ) : (
                 /* Logged Out State */
