@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from db.firestore_client import db
 import math
+import random
 
 ROLLING_WINDOW_DAYS = 14
 LAMBDA = 0.5
@@ -72,3 +73,26 @@ def compute_final_scores(user_id: str, candidate_meals: list[dict]) -> list[dict
             "finalScore": round(final_score, 4),
         })
     return scored_meals
+
+def sample_meals(scored_meals: list[dict], n: int) -> list[dict]:
+
+    """
+    Selects n meals from scored_meals using weighted random sampling,
+    where each meal's probability of being selected is proportional
+    to its finalScore. This means high-scoring meals are likely to appear
+    but not guaranteed, keeping plans varied while still favoring
+    well-rated, non-repetitive meals.
+    """
+
+    if not scored_meals:
+        return []
+    
+    weights = [meal.get("finalScore", 0.0) for meal in scored_meals]
+
+    #edge case coverage of if all weights are 0 (fall back to uniform sampling.)
+    if sum(weights) == 0:
+        return random.sample(scored_meals, min(n, len(scored_meals)))
+    
+    selected = random.choices(scored_meals, weights=weights, k=n)
+
+    return selected
