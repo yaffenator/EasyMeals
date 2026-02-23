@@ -34,14 +34,18 @@ export default function DashboardHeading() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/signin">
+            <Link href="/login">
               {hasAccount ? (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Dashboard
+                /* Profile State */
+                <button className="flex items-center gap-2 p-1.5 px-3 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground">
+                  <User className="h-5 w-5" />
+                  <span className="bg-primary">Profile Name</span>
                 </button>
               ) : (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Create Account / Login
+                /* Logged Out State */
+                <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200">
+                  <User className="h-5 w-5" />
+                  <span>Create Account / Login</span>
                 </button>
               )}
             </Link>
