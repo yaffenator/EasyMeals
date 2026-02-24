@@ -1,24 +1,28 @@
+# seed_recipes.py
 #!/usr/bin/env python3
 """
-seed_firestore.py
+Seeds Firestore recipes/{recipeId} documents in the DetailedRecipe shape,
+and (optionally) creates a meal plan under users/{uid}/mealPlans/{mealPlanId} referencing them.
 
-Seeds Firestore with:
-- ingredients/{ingredientId}                       (canonical ingredient docs; NO measurements in names/ids)
-- recipes/{recipeId}                               (DetailedRecipe + ingredientItems w/ optional quantity/unit)
-- users/{uid}
-- users/{uid}/mealPlans/{mealPlanId}
+IMPORTANT:
+- This script expects ingredients to already exist in ingredients/{ingredientId}
+  where ingredientId is slugified canonical ingredient name (e.g., "breadcrumbs").
+  Run seed_ingredients.py first.
 
-Service account setup:
-1) Put `serviceAccountKey.json` next to this script, OR
-2) Set GOOGLE_APPLICATION_CREDENTIALS to the full path to your JSON key.
+Recipe ingredient behavior:
+- ingredients (string[]) remains for display / backwards compatibility
+- ingredientItems[] contains:
+    - ingredientId: string (canonical, NO measurements)
+    - ingredientRef: DocumentReference to /ingredients/{ingredientId}
+    - originalText: original line (with measurements)
+    - (optional) quantity/unit/notes parsed, but you can ignore later if desired
 
 Run:
-  python seed_firestore.py
-
+  python seed_recipes.py
 Optional:
-  python seed_firestore.py --project YOUR_PROJECT_ID
-  python seed_firestore.py --user-id SOME_UID
-  python seed_firestore.py --dry-run
+  python seed_recipes.py --project YOUR_PROJECT_ID
+  python seed_recipes.py --user-id demo_user --create-mealplan
+  python seed_recipes.py --dry-run
 """
 
 from __future__ import annotations
@@ -52,16 +56,14 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
     if key_path_env:
         p = Path(key_path_env)
         if not p.exists():
-            raise FileNotFoundError(
-                f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {p}"
-            )
+            raise FileNotFoundError(f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {p}")
         cred_obj = credentials.Certificate(str(p))
     elif local_key_path.exists():
         cred_obj = credentials.Certificate(str(local_key_path))
     else:
         raise FileNotFoundError(
             "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
-            "serviceAccountKey.json next to seed_firestore.py."
+            "serviceAccountKey.json next to this script."
         )
 
     options: Dict[str, Any] = {}
@@ -72,15 +74,16 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
     return firestore.client()
 
 
-# -----------------------------
-# Helpers
-# -----------------------------
-
 def now_ts() -> datetime:
     return datetime.now(timezone.utc)
 
 def round2(x: float) -> float:
     return float(f"{x:.2f}")
+
+
+# -----------------------------
+# DetailedRecipe logic (mirrors your TS estimates)
+# -----------------------------
 
 def estimate_macros_from_calories(calories: int) -> Dict[str, int]:
     protein = round(calories * 0.25 / 4)
@@ -105,14 +108,14 @@ def cost_per_serving(total_cost: float, servings: int) -> float:
 
 
 # -----------------------------
-# Ingredient canonicalization (NO measurements in ingredient doc IDs/names)
+# Ingredient canonicalization (no measurements)
 # -----------------------------
 
 UNITS = r"(?:oz|ounce|ounces|lb|lbs|pound|pounds|g|gram|grams|kg|cup|cups|tbsp|tablespoon|tablespoons|tsp|teaspoon|teaspoons|clove|cloves|can|cans|fillet|fillets|each)"
-FRACTION = r"(?:\d+\s*/\s*\d+)"                     # 1/2
-NUMBER = r"(?:\d+(?:\.\d+)?)"                       # 2 or 2.5
-MIXED = rf"(?:{NUMBER}\s+{FRACTION})"               # 1 1/2
-RANGE = rf"(?:{NUMBER}\s*-\s*{NUMBER})"             # 2-3
+FRACTION = r"(?:\d+\s*/\s*\d+)"
+NUMBER = r"(?:\d+(?:\.\d+)?)"
+MIXED = rf"(?:{NUMBER}\s+{FRACTION})"
+RANGE = rf"(?:{NUMBER}\s*-\s*{NUMBER})"
 QTY_TOKEN = rf"(?:{MIXED}|{FRACTION}|{RANGE}|{NUMBER})"
 
 LEADING_QTY_UNIT_RE = re.compile(
@@ -123,6 +126,24 @@ LEADING_QTY_UNIT_RE = re.compile(
 PAREN_RE = re.compile(r"\([^)]*\)")
 EXTRA_SPACE_RE = re.compile(r"\s+")
 FILLER_RE = re.compile(r"\b(to taste|for garnish)\b", re.IGNORECASE)
+
+def canonicalize_ingredient_name(original_line: str) -> str:
+    line = original_line.strip()
+    base = line.split(",", 1)[0].strip()
+    base = PAREN_RE.sub("", base).strip()
+    base = FILLER_RE.sub("", base).strip()
+    m = LEADING_QTY_UNIT_RE.match(base)
+    if m:
+        rest = (m.group("rest") or "").strip()
+        base = rest if rest else base
+    base = EXTRA_SPACE_RE.sub(" ", base).strip()
+    return base or line
+
+def slugify(name: str) -> str:
+    s = name.lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "_", s)
+    s = re.sub(r"_+", "_", s).strip("_")
+    return s or uuid.uuid4().hex
 
 def _norm_unit(u: Optional[str]) -> Optional[str]:
     if not u:
@@ -142,7 +163,6 @@ def _norm_unit(u: Optional[str]) -> Optional[str]:
 
 def _try_parse_qty(q: str) -> Optional[float]:
     q = q.strip()
-    # Mixed number "1 1/2"
     if " " in q and "/" in q:
         left, frac = q.split(None, 1)
         try:
@@ -151,70 +171,25 @@ def _try_parse_qty(q: str) -> Optional[float]:
             return whole + (float(num) / float(den))
         except Exception:
             return None
-    # Fraction "1/2"
     if "/" in q:
         try:
             num, den = q.split("/", 1)
             return float(num) / float(den)
         except Exception:
             return None
-    # Range "2-3" -> pick first (you can change later)
     if "-" in q:
         try:
             a, _b = q.split("-", 1)
             return float(a.strip())
         except Exception:
             return None
-    # Plain number
     try:
         return float(q)
     except Exception:
         return None
 
-def canonicalize_ingredient_name(original_line: str) -> str:
-    """
-    Returns a canonical ingredient name with:
-    - NO leading measurements (qty/unit)
-    - NO parenthetical package notes
-    - NO "to taste" / "for garnish"
-    - No comma-notes (e.g., diced/minced) included in the name
-    """
-    line = original_line.strip()
-
-    # Remove comma-notes from canonical name (keep those as notes elsewhere)
-    base = line.split(",", 1)[0].strip()
-
-    # Remove parentheticals: "(15 oz)" etc
-    base = PAREN_RE.sub("", base).strip()
-
-    # Remove filler phrases
-    base = FILLER_RE.sub("", base).strip()
-
-    # Remove leading qty/unit if present (handles fractions too)
-    m = LEADING_QTY_UNIT_RE.match(base)
-    if m:
-        rest = (m.group("rest") or "").strip()
-        # If rest is empty (rare), fallback to base
-        base = rest if rest else base
-
-    base = EXTRA_SPACE_RE.sub(" ", base).strip()
-
-    # Final fallback
-    return base or original_line.strip()
-
 def parse_ingredient_line(line: str) -> Tuple[Optional[float], Optional[str], str, Optional[str]]:
-    """
-    Parses a line into:
-    - qty (optional float)
-    - unit (optional normalized string)
-    - canonical_name (NO measurements)
-    - notes (optional string after comma)
-
-    Example:
-      "1/2 cup breadcrumbs" -> qty=0.5, unit="cup", canonical_name="breadcrumbs"
-    """
     original = line.strip()
-
     notes = None
     if "," in original:
         left, right = original.split(",", 1)
@@ -223,7 +198,6 @@ def parse_ingredient_line(line: str) -> Tuple[Optional[float], Optional[str], st
     else:
         base_part = original
 
-    # Parse qty/unit from base_part
     qty = None
     unit = None
 
@@ -236,19 +210,13 @@ def parse_ingredient_line(line: str) -> Tuple[Optional[float], Optional[str], st
     canonical_name = canonicalize_ingredient_name(original)
     return qty, unit, canonical_name, notes
 
-def slugify(name: str) -> str:
-    s = name.lower().strip()
-    s = re.sub(r"[^a-z0-9]+", "_", s)
-    s = re.sub(r"_+", "_", s).strip("_")
-    return s or uuid.uuid4().hex
-
 
 # -----------------------------
-# Generator-style recipe content
+# Generator-style content
 # -----------------------------
 
 def generate_ingredients(meal_name: str) -> List[str]:
-    lower = meal_name.toLower() if hasattr(meal_name, "toLower") else meal_name.lower()
+    lower = meal_name.lower()
 
     if "chicken" in lower and "pasta" in lower:
         return [
@@ -557,28 +525,7 @@ BASE_RECIPES: List[BaseRecipeSeed] = [
 ]
 
 
-# -----------------------------
-# Builders
-# -----------------------------
-
-def build_ingredient_doc(canonical_name: str) -> Dict[str, Any]:
-    return {
-        "name": canonical_name,          # <-- guaranteed NO measurements
-        "aliases": [],
-        "category": None,
-        "unit": None,
-        "avgPrice": None,
-        "priceUnit": None,
-        "createdAt": now_ts(),
-        "updatedAt": now_ts(),
-    }
-
-
-def build_detailed_recipe_doc(
-    db: firestore.Client,
-    base: BaseRecipeSeed,
-    ingredient_id_by_name: Dict[str, str],
-) -> Dict[str, Any]:
+def build_recipe_doc(db: firestore.Client, base: BaseRecipeSeed) -> Dict[str, Any]:
     macros = estimate_macros_from_calories(base.calories)
     difficulty = difficulty_from_prep(base.prep_minutes)
     cook_time = cook_time_from_prep(base.prep_minutes)
@@ -593,14 +540,14 @@ def build_detailed_recipe_doc(
 
     for line in ingredient_lines:
         qty, unit, canon_name, notes = parse_ingredient_line(line)
-        ing_id = ingredient_id_by_name.get(canon_name)
+        ing_id = slugify(canon_name)
 
         item: Dict[str, Any] = {
-            "ingredientId": ing_id,
-            "ingredientRef": db.collection("ingredients").document(ing_id) if ing_id else None,
+            "ingredientId": ing_id,  # no measurements
+            "ingredientRef": db.collection("ingredients").document(ing_id),
             "originalText": line,
         }
-        # Quantity/unit stay in recipes (not ingredients collection)
+        # Optional parsing (you can ignore later)
         if qty is not None:
             item["quantity"] = qty
         if unit is not None:
@@ -628,10 +575,10 @@ def build_detailed_recipe_doc(
         "fat": fat_str,
         "difficulty": difficulty,
 
-        # display strings (your UI can keep using these)
+        # UI-friendly strings
         "ingredients": ingredient_lines,
 
-        # structured references
+        # Structured refs + canonical IDs
         "ingredientItems": ingredient_items,
 
         "instructions": instructions,
@@ -651,7 +598,7 @@ def build_detailed_recipe_doc(
     }
 
 
-def build_user_meal_plan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dict[str, Any]:
+def build_user_mealplan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dict[str, Any]:
     start = now_ts()
     end = start + timedelta(days=14)
 
@@ -692,47 +639,22 @@ def build_user_meal_plan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dic
     }
 
 
-# -----------------------------
-# Seeding
-# -----------------------------
+def verify_ingredients_exist(db: firestore.Client) -> None:
+    """
+    Quick sanity check: ensure at least one ingredient exists.
+    """
+    docs = list(db.collection("ingredients").limit(1).stream())
+    if not docs:
+        raise RuntimeError("No ingredients found. Run seed_ingredients.py first.")
 
-def seed(db: firestore.Client, user_id: str, dry_run: bool = False) -> None:
-    user_ref = db.collection("users").document(user_id)
 
-    if dry_run:
-        print(f"[DRY RUN] Would upsert users/{user_id}")
-    else:
-        user_ref.set(
-            {"updatedAt": now_ts(), "createdAt": firestore.SERVER_TIMESTAMP},
-            merge=True,
-        )
-        print(f"Upserted users/{user_id}")
+def seed_recipes(db: firestore.Client, dry_run: bool) -> List[str]:
+    verify_ingredients_exist(db)
 
-    # Build canonical ingredient set across all recipes
-    canonical_to_id: Dict[str, str] = {}
-    ingredient_docs: Dict[str, Dict[str, Any]] = {}
-
-    for base in BASE_RECIPES:
-        for line in generate_ingredients(base.name):
-            canon = canonicalize_ingredient_name(line)
-            if canon not in canonical_to_id:
-                ing_id = slugify(canon)  # <-- now guaranteed to be "breadcrumbs" not "1_2_cup_breadcrumbs"
-                canonical_to_id[canon] = ing_id
-                ingredient_docs[ing_id] = build_ingredient_doc(canon)
-
-    # Write ingredients/
-    if dry_run:
-        print(f"[DRY RUN] Would write {len(ingredient_docs)} ingredient docs to ingredients/")
-    else:
-        for ing_id, doc in ingredient_docs.items():
-            db.collection("ingredients").document(ing_id).set(doc)
-        print(f"Wrote {len(ingredient_docs)} docs to ingredients/")
-
-    # Write recipes/
     recipe_ids: List[str] = []
     for base in BASE_RECIPES:
         recipe_id = uuid.uuid4().hex
-        doc = build_detailed_recipe_doc(db=db, base=base, ingredient_id_by_name=canonical_to_id)
+        doc = build_recipe_doc(db, base)
         recipe_ids.append(recipe_id)
 
         if dry_run:
@@ -741,33 +663,45 @@ def seed(db: firestore.Client, user_id: str, dry_run: bool = False) -> None:
             db.collection("recipes").document(recipe_id).set(doc)
             print(f"Wrote recipes/{recipe_id}: {doc['name']}")
 
-    # Write users/{uid}/mealPlans/{mealPlanId}
+    return recipe_ids
+
+
+def seed_mealplan_for_user(db: firestore.Client, user_id: str, recipe_ids: List[str], dry_run: bool) -> None:
+    user_ref = db.collection("users").document(user_id)
     meal_plan_id = uuid.uuid4().hex
-    meal_plan_ref = user_ref.collection("mealPlans").document(meal_plan_id)
+    mp_ref = user_ref.collection("mealPlans").document(meal_plan_id)
 
     if dry_run:
         print(f"[DRY RUN] Would write users/{user_id}/mealPlans/{meal_plan_id} referencing {len(recipe_ids)} recipes")
-    else:
-        plan_doc = build_user_meal_plan_doc(db=db, recipe_ids=recipe_ids)
-        meal_plan_ref.set(plan_doc)
-        print(f"Wrote users/{user_id}/mealPlans/{meal_plan_id}")
+        return
+
+    # Ensure user doc exists
+    user_ref.set({"updatedAt": now_ts(), "createdAt": firestore.SERVER_TIMESTAMP}, merge=True)
+    mp_doc = build_user_mealplan_doc(db, recipe_ids)
+    mp_ref.set(mp_doc)
+    print(f"Wrote users/{user_id}/mealPlans/{meal_plan_id}")
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Seed Firestore with ingredients (no measurements) + recipes + user mealPlans subcollection."
-    )
-    parser.add_argument("--project", dest="project_id", default=None, help="Override Firebase project id (optional).")
-    parser.add_argument("--user-id", dest="user_id", default="demo_user", help="User UID to own the seeded meal plan.")
-    parser.add_argument("--dry-run", dest="dry_run", action="store_true", help="Print actions without writing to Firestore.")
-    return parser.parse_args()
+    p = argparse.ArgumentParser(description="Seed recipes collection (expects ingredients already seeded).")
+    p.add_argument("--project", dest="project_id", default=None)
+    p.add_argument("--dry-run", dest="dry_run", action="store_true")
+    p.add_argument("--user-id", dest="user_id", default=None, help="If provided with --create-mealplan, seeds a plan under this user.")
+    p.add_argument("--create-mealplan", dest="create_mealplan", action="store_true")
+    return p.parse_args()
 
 
 def main() -> int:
     args = parse_args()
     try:
         db = init_firestore(project_id=args.project_id)
-        seed(db, user_id=args.user_id, dry_run=args.dry_run)
+        recipe_ids = seed_recipes(db, dry_run=args.dry_run)
+
+        if args.create_mealplan:
+            if not args.user_id:
+                raise ValueError("--create-mealplan requires --user-id")
+            seed_mealplan_for_user(db, args.user_id, recipe_ids, dry_run=args.dry_run)
+
         print("Done.")
         return 0
     except Exception as e:
