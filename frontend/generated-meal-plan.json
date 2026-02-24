@@ -1,0 +1,639 @@
+{
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "meals": [
+        {
+          "id": "meal-W1-D1-B",
+          "day": "Monday",
+          "name": "Hearty Oatmeal with Banana and Nuts",
+          "calories": 450,
+          "carbs": "70g",
+          "fat": "15g",
+          "protein": "10g",
+          "prepTime": 2,
+          "cookTime": 5,
+          "servings": 1,
+          "costPerServing": 1.5,
+          "totalCost": 1.5,
+          "mealType": "breakfast",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1/2 cup rolled oats",
+            "1 cup water or milk",
+            "1 medium banana, sliced",
+            "1/4 cup walnuts or almonds, chopped",
+            "Pinch of cinnamon (optional)"
+          ],
+          "instructions": [
+            "Combine oats and water/milk in a saucepan.",
+            "Bring to a boil, then reduce heat and simmer for 5 minutes, stirring occasionally, until oats are creamy.",
+            "Pour into a bowl and top with sliced banana, chopped nuts, and cinnamon."
+          ],
+          "nutritionInfo": {
+            "calories": "450kcal",
+            "carbs": "70g",
+            "fat": "15g",
+            "protein": "10g"
+          },
+          "tags": [
+            "breakfast",
+            "vegetarian",
+            "oatmeal",
+            "budget-friendly"
+          ],
+          "tips": [
+            "For extra protein, stir in a spoonful of peanut butter.",
+            "Can be made with water to save on cost."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W1-D1-L",
+          "day": "Monday",
+          "name": "Budget-Friendly Lentil Soup with Whole Grain Bread",
+          "calories": 650,
+          "carbs": "90g",
+          "fat": "15g",
+          "protein": "35g",
+          "prepTime": 15,
+          "cookTime": 30,
+          "servings": 1,
+          "costPerServing": 3,
+          "totalCost": 3,
+          "mealType": "lunch",
+          "difficulty": "Medium",
+          "ingredients": [
+            "1 cup dried brown or green lentils, rinsed",
+            "1 tbsp olive oil",
+            "1 medium onion, chopped",
+            "2 carrots, diced",
+            "2 celery stalks, diced",
+            "2 cloves garlic, minced",
+            "1 (14.5 oz) can diced tomatoes, undrained",
+            "4 cups vegetable broth",
+            "1 tsp dried thyme",
+            "Salt and black pepper to taste",
+            "2 slices whole grain bread"
+          ],
+          "instructions": [
+            "Heat olive oil in a large pot over medium heat.",
+            "Add onion, carrots, and celery; cook until softened, about 5-7 minutes.",
+            "Stir in garlic and cook for another minute until fragrant.",
+            "Add rinsed lentils, diced tomatoes, vegetable broth, and thyme. Bring to a boil.",
+            "Reduce heat, cover, and simmer for 25-30 minutes, or until lentils are tender.",
+            "Season with salt and pepper. Serve hot with whole grain bread."
+          ],
+          "nutritionInfo": {
+            "calories": "650kcal",
+            "carbs": "90g",
+            "fat": "15g",
+            "protein": "35g"
+          },
+          "tags": [
+            "lunch",
+            "vegetarian",
+            "soup",
+            "lentils",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Make a larger batch for easy leftovers throughout the week.",
+            "Add a pinch of red pepper flakes for a subtle kick."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W1-D1-D",
+          "day": "Monday",
+          "name": "Quick Chicken & Veggie Stir-fry with Brown Rice",
+          "calories": 700,
+          "carbs": "80g",
+          "fat": "25g",
+          "protein": "45g",
+          "prepTime": 15,
+          "cookTime": 20,
+          "servings": 1,
+          "costPerServing": 4.5,
+          "totalCost": 4.5,
+          "mealType": "dinner",
+          "difficulty": "Easy",
+          "ingredients": [
+            "4 oz chicken breast, cut into strips",
+            "1 cup cooked brown rice",
+            "2 cups frozen mixed vegetables (broccoli, carrots, snap peas)",
+            "1 tbsp low sodium soy sauce",
+            "1 tsp sesame oil",
+            "1 clove garlic, minced",
+            "1 tsp olive oil"
+          ],
+          "instructions": [
+            "Cook brown rice according to package directions.",
+            "Heat olive oil in a large skillet or wok over medium-high heat.",
+            "Add chicken strips and cook until browned and cooked through, about 5-7 minutes. Remove chicken and set aside.",
+            "Add frozen mixed vegetables and minced garlic to the skillet and stir-fry for 5-7 minutes until tender-crisp.",
+            "Return chicken to the skillet. Stir in soy sauce and sesame oil. Toss to coat.",
+            "Serve hot over brown rice."
+          ],
+          "nutritionInfo": {
+            "calories": "700kcal",
+            "carbs": "80g",
+            "fat": "25g",
+            "protein": "45g"
+          },
+          "tags": [
+            "dinner",
+            "chicken",
+            "stir-fry",
+            "vegetables",
+            "rice",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Prep extra rice to use for other meals.",
+            "Add a dash of sriracha for a spicy kick."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        }
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "meals": [
+        {
+          "id": "meal-W2-D1-B",
+          "day": "Monday",
+          "name": "Scrambled Eggs with Whole Wheat Toast and Spinach",
+          "calories": 400,
+          "carbs": "35g",
+          "fat": "20g",
+          "protein": "20g",
+          "prepTime": 2,
+          "cookTime": 8,
+          "servings": 1,
+          "costPerServing": 1.8,
+          "totalCost": 1.8,
+          "mealType": "breakfast",
+          "difficulty": "Easy",
+          "ingredients": [
+            "2 large eggs",
+            "2 slices whole wheat toast",
+            "1 cup fresh spinach",
+            "1 tsp olive oil",
+            "Salt and pepper to taste"
+          ],
+          "instructions": [
+            "Heat olive oil in a non-stick skillet over medium heat.",
+            "Add spinach and cook until wilted, about 2-3 minutes. Remove from pan and set aside.",
+            "Whisk eggs with a pinch of salt and pepper.",
+            "Pour eggs into the skillet and scramble until cooked through.",
+            "Serve eggs with toast and wilted spinach."
+          ],
+          "nutritionInfo": {
+            "calories": "400kcal",
+            "carbs": "35g",
+            "fat": "20g",
+            "protein": "20g"
+          },
+          "tags": [
+            "breakfast",
+            "eggs",
+            "whole grain",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Add a slice of avocado for healthy fats if budget allows.",
+            "A sprinkle of cheese can add flavor."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W2-D1-L",
+          "day": "Monday",
+          "name": "Black Bean & Corn Salad with Quinoa",
+          "calories": 600,
+          "carbs": "80g",
+          "fat": "15g",
+          "protein": "25g",
+          "prepTime": 15,
+          "cookTime": 0,
+          "servings": 1,
+          "costPerServing": 3.2,
+          "totalCost": 3.2,
+          "mealType": "lunch",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1 cup cooked quinoa",
+            "1 can (15 oz) black beans, rinsed and drained",
+            "1 cup frozen corn, thawed",
+            "1/2 red bell pepper, diced",
+            "1/4 red onion, finely chopped",
+            "2 tbsp olive oil",
+            "1 tbsp lime juice",
+            "Cilantro, chopped (optional)",
+            "Salt and pepper to taste"
+          ],
+          "instructions": [
+            "In a large bowl, combine cooked quinoa, black beans, corn, red bell pepper, and red onion.",
+            "In a small bowl, whisk together olive oil, lime juice, salt, and pepper.",
+            "Pour dressing over the salad ingredients and toss to combine.",
+            "Stir in chopped cilantro if desired. Serve chilled or at room temperature."
+          ],
+          "nutritionInfo": {
+            "calories": "600kcal",
+            "carbs": "80g",
+            "fat": "15g",
+            "protein": "25g"
+          },
+          "tags": [
+            "lunch",
+            "vegetarian",
+            "salad",
+            "quinoa",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Prepare a larger batch of quinoa at the beginning of the week.",
+            "Add some diced avocado for extra creaminess if budget permits."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W2-D1-D",
+          "day": "Monday",
+          "name": "Spaghetti with Marinara Sauce and Ground Turkey",
+          "calories": 750,
+          "carbs": "90g",
+          "fat": "30g",
+          "protein": "40g",
+          "prepTime": 10,
+          "cookTime": 25,
+          "servings": 1,
+          "costPerServing": 4.8,
+          "totalCost": 4.8,
+          "mealType": "dinner",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1.5 cups cooked spaghetti",
+            "4 oz lean ground turkey",
+            "1 cup marinara sauce",
+            "1/2 onion, chopped",
+            "2 cloves garlic, minced",
+            "1 tsp olive oil",
+            "Salt and pepper to taste"
+          ],
+          "instructions": [
+            "Cook spaghetti according to package directions.",
+            "Heat olive oil in a skillet over medium heat. Add ground turkey and cook, breaking it up with a spoon, until browned. Drain any excess fat.",
+            "Add chopped onion and minced garlic to the skillet with the turkey; cook until onion softens, about 5 minutes.",
+            "Stir in marinara sauce and bring to a simmer. Cook for 10-15 minutes.",
+            "Serve the sauce over cooked spaghetti."
+          ],
+          "nutritionInfo": {
+            "calories": "750kcal",
+            "carbs": "90g",
+            "fat": "30g",
+            "protein": "40g"
+          },
+          "tags": [
+            "dinner",
+            "pasta",
+            "turkey",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Add some frozen mixed vegetables to the sauce for extra nutrients.",
+            "Use whole wheat spaghetti for more fiber."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        }
+      ]
+    },
+    {
+      "weekNumber": 3,
+      "meals": [
+        {
+          "id": "meal-W3-D1-B",
+          "day": "Monday",
+          "name": "Peanut Butter Banana Smoothie",
+          "calories": 420,
+          "carbs": "60g",
+          "fat": "18g",
+          "protein": "15g",
+          "prepTime": 5,
+          "cookTime": 0,
+          "servings": 1,
+          "costPerServing": 1.7,
+          "totalCost": 1.7,
+          "mealType": "breakfast",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1 medium banana",
+            "1 cup milk (dairy or non-dairy)",
+            "2 tbsp peanut butter",
+            "1/2 cup ice cubes (optional)",
+            "1 scoop protein powder (optional, adds cost)"
+          ],
+          "instructions": [
+            "Combine banana, milk, peanut butter, and ice cubes (if using) in a blender.",
+            "Blend until smooth and creamy.",
+            "Pour into a glass and serve immediately."
+          ],
+          "nutritionInfo": {
+            "calories": "420kcal",
+            "carbs": "60g",
+            "fat": "18g",
+            "protein": "15g"
+          },
+          "tags": [
+            "breakfast",
+            "smoothie",
+            "vegetarian",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Use frozen banana for a colder, thicker smoothie.",
+            "Add a handful of spinach for hidden greens."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W3-D1-L",
+          "day": "Monday",
+          "name": "Tuna Salad Sandwich on Whole Wheat with Carrots",
+          "calories": 550,
+          "carbs": "45g",
+          "fat": "30g",
+          "protein": "30g",
+          "prepTime": 10,
+          "cookTime": 0,
+          "servings": 1,
+          "costPerServing": 3.5,
+          "totalCost": 3.5,
+          "mealType": "lunch",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1 can (5 oz) tuna in water, drained",
+            "2 tbsp mayonnaise or Greek yogurt",
+            "1 celery stalk, finely chopped",
+            "1/4 onion, finely chopped (optional)",
+            "2 slices whole wheat bread",
+            "Lettuce leaves",
+            "1 medium carrot, cut into sticks"
+          ],
+          "instructions": [
+            "In a bowl, flake the drained tuna.",
+            "Add mayonnaise (or Greek yogurt), chopped celery, and onion (if using). Mix well.",
+            "Season with salt and pepper to taste.",
+            "Spread tuna salad onto one slice of whole wheat bread, top with lettuce, and then the other slice of bread.",
+            "Serve with carrot sticks on the side."
+          ],
+          "nutritionInfo": {
+            "calories": "550kcal",
+            "carbs": "45g",
+            "fat": "30g",
+            "protein": "30g"
+          },
+          "tags": [
+            "lunch",
+            "tuna",
+            "sandwich",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Use Greek yogurt instead of mayonnaise for a lighter, higher protein option.",
+            "Add pickles or relish for extra flavor."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W3-D1-D",
+          "day": "Monday",
+          "name": "Chicken & Broccoli Pasta",
+          "calories": 780,
+          "carbs": "95g",
+          "fat": "25g",
+          "protein": "50g",
+          "prepTime": 15,
+          "cookTime": 25,
+          "servings": 1,
+          "costPerServing": 4.8,
+          "totalCost": 4.8,
+          "mealType": "dinner",
+          "difficulty": "Medium",
+          "ingredients": [
+            "1.5 cups cooked whole wheat pasta (e.g., penne or rotini)",
+            "4 oz chicken breast, diced",
+            "2 cups broccoli florets",
+            "1 tbsp olive oil",
+            "2 cloves garlic, minced",
+            "1/4 cup chicken broth",
+            "2 tbsp grated Parmesan cheese (optional, adds cost)",
+            "Salt and black pepper to taste"
+          ],
+          "instructions": [
+            "Cook pasta according to package directions. Add broccoli florets to the pasta water during the last 3-4 minutes of cooking.",
+            "Drain pasta and broccoli, reserving 1/4 cup of pasta water.",
+            "While pasta cooks, heat olive oil in a large skillet over medium-high heat.",
+            "Add diced chicken and cook until browned and cooked through, about 5-7 minutes. Remove chicken and set aside.",
+            "Add minced garlic to the skillet and cook for 1 minute until fragrant.",
+            "Return chicken to the skillet, add the drained pasta and broccoli.",
+            "Pour in chicken broth and reserved pasta water. Toss gently to combine.",
+            "Season with salt and pepper. Serve hot, topped with Parmesan cheese if desired."
+          ],
+          "nutritionInfo": {
+            "calories": "780kcal",
+            "carbs": "95g",
+            "fat": "25g",
+            "protein": "50g"
+          },
+          "tags": [
+            "dinner",
+            "pasta",
+            "chicken",
+            "broccoli",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Use frozen broccoli to save on prep time.",
+            "A squeeze of lemon juice brightens the flavors."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        }
+      ]
+    },
+    {
+      "weekNumber": 4,
+      "meals": [
+        {
+          "id": "meal-W4-D1-B",
+          "day": "Monday",
+          "name": "Oatmeal with Frozen Berries and Chia Seeds",
+          "calories": 480,
+          "carbs": "75g",
+          "fat": "15g",
+          "protein": "12g",
+          "prepTime": 2,
+          "cookTime": 5,
+          "servings": 1,
+          "costPerServing": 1.8,
+          "totalCost": 1.8,
+          "mealType": "breakfast",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1/2 cup rolled oats",
+            "1 cup water or milk",
+            "1/2 cup frozen mixed berries",
+            "1 tbsp chia seeds",
+            "Drizzle of honey or maple syrup (optional)"
+          ],
+          "instructions": [
+            "Combine oats and water/milk in a saucepan. Bring to a boil.",
+            "Reduce heat and simmer for 5 minutes, stirring occasionally, until oats are creamy.",
+            "Stir in frozen berries and chia seeds. Cook for another minute until berries are slightly softened.",
+            "Pour into a bowl and drizzle with honey or maple syrup if desired."
+          ],
+          "nutritionInfo": {
+            "calories": "480kcal",
+            "carbs": "75g",
+            "fat": "15g",
+            "protein": "12g"
+          },
+          "tags": [
+            "breakfast",
+            "vegetarian",
+            "oatmeal",
+            "berries",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Chia seeds add omega-3s and fiber. You can use flax seeds instead.",
+            "Cook oats overnight for a quicker morning meal."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W4-D1-L",
+          "day": "Monday",
+          "name": "Hummus & Veggie Wrap with Apple",
+          "calories": 520,
+          "carbs": "70g",
+          "fat": "20g",
+          "protein": "15g",
+          "prepTime": 10,
+          "cookTime": 0,
+          "servings": 1,
+          "costPerServing": 3.8,
+          "totalCost": 3.8,
+          "mealType": "lunch",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1 large whole wheat tortilla or wrap",
+            "1/4 cup hummus",
+            "1/2 cup mixed greens",
+            "1/4 cucumber, sliced",
+            "1/4 bell pepper, thinly sliced",
+            "1 medium apple"
+          ],
+          "instructions": [
+            "Lay the tortilla flat.",
+            "Spread hummus evenly over the tortilla, leaving a border around the edges.",
+            "Arrange the mixed greens, cucumber, and bell pepper over the hummus.",
+            "Roll up the tortilla tightly. Cut in half if desired.",
+            "Serve with a whole apple on the side."
+          ],
+          "nutritionInfo": {
+            "calories": "520kcal",
+            "carbs": "70g",
+            "fat": "20g",
+            "protein": "15g"
+          },
+          "tags": [
+            "lunch",
+            "vegetarian",
+            "wrap",
+            "hummus",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Add a sprinkle of feta cheese if you like.",
+            "This wrap is great for meal prepping and taking to work."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        },
+        {
+          "id": "meal-W4-D1-D",
+          "day": "Monday",
+          "name": "Large Baked Potato with Chili (Bean-based)",
+          "calories": 680,
+          "carbs": "100g",
+          "fat": "10g",
+          "protein": "30g",
+          "prepTime": 5,
+          "cookTime": 60,
+          "servings": 1,
+          "costPerServing": 4,
+          "totalCost": 4,
+          "mealType": "dinner",
+          "difficulty": "Easy",
+          "ingredients": [
+            "1 large baking potato",
+            "1.5 cups homemade or canned bean chili (vegetarian or with minimal meat for budget)",
+            "2 tbsp plain Greek yogurt or sour cream (optional, adds cost)",
+            "1/4 cup shredded cheddar cheese (optional, adds cost)",
+            "Chives, chopped (optional)"
+          ],
+          "instructions": [
+            "Preheat oven to 400°F (200°C). Wash the potato thoroughly and prick several times with a fork.",
+            "Bake directly on the oven rack for 50-60 minutes, or until fork-tender.",
+            "While potato bakes, gently heat chili in a saucepan.",
+            "Once potato is cooked, carefully slice it lengthwise and fluff the inside with a fork.",
+            "Top with warm chili. Add Greek yogurt/sour cream, cheese, and chives if desired."
+          ],
+          "nutritionInfo": {
+            "calories": "680kcal",
+            "carbs": "100g",
+            "fat": "10g",
+            "protein": "30g"
+          },
+          "tags": [
+            "dinner",
+            "vegetarian",
+            "potato",
+            "chili",
+            "budget-friendly"
+          ],
+          "tips": [
+            "Make a big batch of bean chili on the weekend for easy weekday meals.",
+            "Microwave the potato for faster cooking (approx. 8-10 mins)."
+          ],
+          "source": "generated",
+          "createdAt": "February 23, 2026 at 9:31:13 PM PST",
+          "updatedAt": "February 23, 2026 at 9:31:13 PM PST"
+        }
+      ]
+    }
+  ]
+}

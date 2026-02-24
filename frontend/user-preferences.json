@@ -1,9 +1,7 @@
 {
-  "monthlyBudget": 232,
+  "monthlyBudget": 333,
   "goal": "maintain",
-  "currentWeight": 165,
+  "currentWeight": 333,
   "allergies": [],
-  "excludedCuisines": [
-    "Indian"
-  ]
+  "excludedCuisines": []
 }
