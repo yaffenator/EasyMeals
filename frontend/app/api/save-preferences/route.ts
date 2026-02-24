@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const timestamp = new Date().toISOString(); // Using ISO for Firebase compatibility
 
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         generationConfig: { responseMimeType: "application/json" }
     });
 
