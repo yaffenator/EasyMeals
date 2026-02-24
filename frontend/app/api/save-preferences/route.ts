@@ -8,83 +8,48 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 export async function POST(request: Request) {
   try {
     const preferences = await request.json();
-    const timestamp = new Date().toLocaleString('en-US', { 
-      month: 'long', day: 'numeric', year: 'numeric', 
-      hour: 'numeric', minute: 'numeric', second: 'numeric', 
-      hour12: true, timeZoneName: 'short' 
-    });
-
-    // 1. Save preferences locally
-    const prefPath = path.join(process.cwd(), 'user-preferences.json');
-    fs.writeFileSync(prefPath, JSON.stringify(preferences, null, 2));
+    const timestamp = new Date().toISOString(); // Using ISO for Firebase compatibility
 
     const model = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash",
         generationConfig: { responseMimeType: "application/json" }
     });
 
-    // 3. Create the Prompt
     const prompt = `
-      You are a professional nutritionist. Create a 4-week meal plan (28 days) based on: ${JSON.stringify(preferences)}.
-      Current Timestamp: ${timestamp}
+      You are a nutritionist and database architect. Create a 4-week meal plan.
+      User Preferences: ${JSON.stringify(preferences)}
+      
+      BUDGET RULE: Total cost must not exceed 60% of $${preferences.monthlyBudget}.
+      
+      OUTPUT FORMAT: Return a JSON object with two keys: "mealPlan" and "newIngredients".
+      
+      1. "mealPlan": A 4-week plan. Each meal must follow your Firebase Recipe Schema:
+         - "name", "calories", "carbs", "fat", "protein", "prepTime", "cookTime", "servings", "costPerServing", "totalCost", "mealType", "difficulty", "instructions", "tags", "tips", "source": "generated"
+         - "ingredientItems": An array of maps: { "ingredientId": "snake_case_id", "originalText": "string", "quantity": number, "unit": "string", "notes": "string" }
+         - "ingredients": A simple string array of the items.
+         - "createdAt": "${timestamp}", "updatedAt": "${timestamp}"
 
-      For EVERY meal, follow this EXACT JSON structure:
-      {
-        "weeks": [
-          {
-            "weekNumber": 1,
-            "meals": [
-              {
-                "id": "unique-uuid",
-                "day": "Monday",
-                "name": "string",
-                "calories": number,
-                "carbs": "string (e.g. 79g)",
-                "fat": "string (e.g. 23g)",
-                "protein": "string (e.g. 44g)",
-                "prepTime": number (minutes),
-                "cookTime": number (minutes),
-                "servings": number,
-                "costPerServing": number,
-                "totalCost": number,
-                "mealType": "lunch" | "dinner" | "breakfast",
-                "difficulty": "Easy" | "Medium" | "Hard",
-                "ingredients": ["string"],
-                "instructions": ["string"],
-                "nutritionInfo": {
-                  "calories": "string",
-                  "carbs": "string",
-                  "fat": "string",
-                  "protein": "string"
-                },
-                "tags": ["string"],
-                "tips": ["string"],
-                "source": "generated",
-                "createdAt": "${timestamp}",
-                "updatedAt": "${timestamp}"
-              }
-            ]
-          }
-        ]
-      }
+      2. "newIngredients": A master list of every unique ingredient used in the recipes:
+         { 
+           "snake_case_id": { 
+             "name": "Display Name", 
+             "category": "Produce|Meat|Dairy|etc", 
+             "avgPrice": number, 
+             "unit": "standard unit" 
+           } 
+         }
 
-      Requirements:
-      - Strictly observe budget: $${preferences.monthlyBudget} total.
-      - Strictly avoid: ${preferences.allergies.join(', ')} and ${preferences.excludedCuisines.join(', ')}.
-      - Adjust calories for goal: ${preferences.goal} and weight: ${preferences.currentWeight}.
+      Ensure all ingredientIds are consistent between the recipes and the newIngredients list.
     `;
 
     const result = await model.generateContent(prompt);
-    const mealPlanJSON = JSON.parse(result.response.text());
+    const responseData = JSON.parse(result.response.text());
 
-    // 2. Save the result locally for VS Code
-    const planPath = path.join(process.cwd(), 'generated-meal-plan.json');
-    fs.writeFileSync(planPath, JSON.stringify(mealPlanJSON, null, 2));
+    // Save locally for your review in VS Code
+    fs.writeFileSync(path.join(process.cwd(), 'ai-response.json'), JSON.stringify(responseData, null, 2));
 
-    return NextResponse.json(mealPlanJSON);
-
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: 'Failed to generate' }, { status: 500 });
+    return NextResponse.json({ error: 'Generation failed' }, { status: 500 });
   }
 }
