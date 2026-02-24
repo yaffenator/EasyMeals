@@ -30,6 +30,7 @@ const commonAllergies = [
 export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Form State
   const [monthlyBudget, setMonthlyBudget] = useState('');
@@ -44,35 +45,33 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
     if (step < 5) {
       setStep(step + 1);
     } else {
-      setIsSaving(true);
+      setLoading(true);
       
-      const allAllergies = [
-        ...selectedAllergies,
-        ...(otherAllergyChecked ? customAllergies.filter(a => a.trim() !== '') : [])
-      ];
-
-      const finalData: MealPlanData = {
+      // --- THIS IS WHERE WE DEFINE finalData ---
+      const finalData = {
         monthlyBudget: parseFloat(monthlyBudget),
-        goal,
+        goal: goal,
         currentWeight: parseFloat(weight),
-        allergies: allAllergies,
+        allergies: selectedAllergies,
         excludedCuisines: excludedCuisines.split(',').map(c => c.trim()).filter(c => c !== '')
       };
 
       try {
-        // Step A: Save to VS Code project root via our API
-        await fetch('/api/save-preferences', {
+        const response = await fetch('/api/save-preferences', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(finalData),
+          body: JSON.stringify(finalData), // Now the computer knows what finalData is
         });
 
-        // Step B: Tell Dashboard to generate meals and close wizard
-        onComplete(finalData);
+        if (!response.ok) throw new Error('Generation failed');
+        
+        const fullMealPlan = await response.json();
+        onComplete(fullMealPlan); 
       } catch (error) {
-        console.error("Save failed:", error);
+        console.error("Error:", error);
+        alert("Something went wrong. Check your console!");
       } finally {
-        setIsSaving(false);
+        setLoading(false);
       }
     }
   };
