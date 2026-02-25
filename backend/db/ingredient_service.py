@@ -1,4 +1,4 @@
-from firestore_client import db
+from db.firestore_client import db
 from google.cloud import firestore as fs
 
 #mapping of potential spelling of the units to the way we want to store the units
