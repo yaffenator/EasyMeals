@@ -25,21 +25,22 @@ def get_global_average() -> float:
 
 def update_global_stats(new_rating: int):
     '''
-    incrementing the 'totalRatingSum' and 'totalRatingCount' fields for globalStats
-    then recomputes globalAvg. 
+    Reads current totals, adds the new rating, recomputes globalAvg,
+    then writes everything in a single update call.
     '''
     stats_ref = db.collection("meta").document("globalStats")
+    
+    current = stats_ref.get().to_dict() or {}
+    new_sum = current.get("totalRatingSum", 0) + new_rating
+    new_count = current.get("totalRatingCount", 0) + 1
+    new_avg = new_sum / new_count
+
     stats_ref.update({
-        "totalRatingSum": fs.Increment(new_rating),
-        "totalRatingCount": fs.Increment(1),
+        "totalRatingSum": new_sum,
+        "totalRatingCount": new_count,
+        "globalAvg": new_avg,
         "updatedAt": fs.SERVER_TIMESTAMP,
     })
-
-    #recompute and store the new average
-    updated = stats_ref.get().to_dict()
-    new_avg = updated["totalRatingSum"] / updated["totalRatingCount"]
-    stats_ref.update({"globalAvg": new_avg})
-
 
 def compute_bayesian_score(R: float, v: int, m: float, C: int) -> float:
     '''
