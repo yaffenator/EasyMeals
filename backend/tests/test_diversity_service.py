@@ -52,8 +52,9 @@ def test_compute_final_scores_penalizes_recent_meals():
     mock_history_doc.to_dict.return_value = {"mealId": "meal_1"}
 
     mock_db = MagicMock()
-    mock_db.collection().document().collection().where().stream.return_value = [
-        mock_history_doc, mock_history_doc  # meal_1 eaten twice recently
+    # match the exact chain: .collection().document().collection().where().stream()
+    mock_db.collection.return_value.document.return_value.collection.return_value.where.return_value.stream.return_value = [
+        mock_history_doc, mock_history_doc  # meal_1 eaten twice
     ]
 
     with patch("db.firestore_client.db", MagicMock()):
