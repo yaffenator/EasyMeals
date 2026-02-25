@@ -60,8 +60,8 @@ def compute_final_scores(user_id: str, candidate_meals: list[dict]) -> list[dict
     
     scored_meals = []
     for meal in candidate_meals:
-        meal_id = meal.get("mealID")
-        recommendation_score = meal.get("recommendation_score", 0.0)
+        meal_id = meal.get("mealId")
+        recommendation_score = meal.get("recommendationScore", 0.0)
         recent_count = recent_history.get(meal_id, 0)
 
         diversity_weight = compute_diversity_weight(recent_count)
