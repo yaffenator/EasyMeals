@@ -36,6 +36,18 @@ def seed(db: firestore.Client):
     now = datetime.now(timezone.utc)
 
     # -----------------------------
+    # Storing global average
+    # this is so we don't have to scan through the entire meals collection to compute the average(view rating_service.py)
+    # -----------------------------
+
+    db.collection("meta").document("globalStats").set({
+        "totalRatingSum": 0.0,
+        "totalRatingCount": 0,
+        "globalAvg": 3.0,  # sensible default before any ratings exist
+        "updatedAt": firestore.SERVER_TIMESTAMP,
+    })
+
+    # -----------------------------
     # ingredients (global)
     # -----------------------------
     ingredient_id = "dummy_ingredient_chicken_breast"
