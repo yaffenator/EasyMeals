@@ -69,12 +69,23 @@ def test_rate_meal_returns_updated_stats():
     }
 
     mock_stats_doc = MagicMock()
-    mock_stats_doc.exists = True
-    mock_stats_doc.to_dict.return_value = {"globalAvg": 3.5}
+    mock_stats_doc.to_dict.return_value = {
+        "totalRatingSum": 40.0,
+        "totalRatingCount": 10,
+        "globalAvg": 3.5,
+    }
+
+    mock_meals_ref = MagicMock()
+    mock_meals_ref.document.return_value.get.return_value = mock_meal_doc
+
+    mock_meta_ref = MagicMock()
+    mock_meta_ref.document.return_value.get.return_value = mock_stats_doc
 
     mock_db = MagicMock()
-    mock_db.collection("meals").document().get.return_value = mock_meal_doc
-    mock_db.collection("meta").document().get.return_value = mock_stats_doc
+    mock_db.collection.side_effect = lambda name: {
+        "meals": mock_meals_ref,
+        "meta": mock_meta_ref,
+    }[name]
 
     with patch("db.firestore_client.db", MagicMock()):
         with patch("db.rating_service.db", mock_db):
