@@ -16,10 +16,12 @@ export async function POST(request: Request) {
     });
 
     const prompt = `
-      You are a nutritionist and database architect. Create a 4-week meal plan.
-      User Preferences: ${JSON.stringify(preferences)}
+      You are a nutritionist and database architect. Create a 4-week meal plan, just focusing on making dinners.
+      Use these preferneces to guide the meal plan, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
       
       BUDGET RULE: Total cost must not exceed 60% of $${preferences.monthlyBudget}.
+
+      The average price for ingredients should be in USD and reflect current market prices. Use the following categories for ingredients: Produce, Meat, Dairy, Grains, Spices, etc.
       
       OUTPUT FORMAT: Return a JSON object with two keys: "mealPlan" and "newIngredients".
       
