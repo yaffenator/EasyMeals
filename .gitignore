@@ -3,3 +3,4 @@ backend/.env
 backend/db/test_ingredient_service.py
 backend/db/__pycache__
 backend/tests/__pycache__
+.venv
