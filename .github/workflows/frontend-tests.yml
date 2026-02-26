@@ -39,4 +39,4 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Run Python Automated Tests
-        run: python -m pytest tests/
+        run: python -m pytest frontend/tests/
