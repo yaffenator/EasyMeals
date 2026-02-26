@@ -78,14 +78,14 @@ const mealTemplates = [
 
 const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-function calculateMealCost(baseCost: number, weeklyBudget: number): string {
+export function calculateMealCost(baseCost: number, weeklyBudget: number): string {
   // Adjust cost based on weekly budget
   const adjustmentFactor = weeklyBudget / 60; // Base weekly budget of $60
   const adjustedCost = baseCost * adjustmentFactor;
   return `$${adjustedCost.toFixed(2)}`;
 }
 
-function calculateCalories(goal: 'lose' | 'gain' | 'maintain', baseCalories: number): number {
+export function calculateCalories(goal: 'lose' | 'gain' | 'maintain', baseCalories: number): number {
   switch (goal) {
     case 'lose':
       return Math.round(baseCalories * 0.85); // 15% fewer calories
