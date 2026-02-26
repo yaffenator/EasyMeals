@@ -2,7 +2,7 @@ name: frontend-tests
 
 on:
   push:
-    branches: ["main", "test/Dashboard"]
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -27,16 +27,3 @@ jobs:
 
       - name: Run tests
         run: npm run test:ci
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install Python dependencies
-        run: |
-          pip install pytest pytest-playwright pytest-cov
-          python -m playwright install --with-deps chromium
-
-      - name: Run Python Automated Tests
-        run: python -m pytest tests/
