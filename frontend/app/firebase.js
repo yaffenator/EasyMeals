@@ -38,10 +38,10 @@ export const loginUser = async (email, password) => {
   }
 }
 
-// export const logoutUser = async () => {
-//   try {
-//     await auth.signOut();
-//   } catch (error) {
-//     throw error;
-//   }
-// }
+export const logoutUser = async () => {
+  try {
+    await auth.signOut();
+  } catch (error) {
+    throw error;
+  }
+}

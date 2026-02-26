@@ -1,13 +1,14 @@
 "use client";
 
-import { Leaf, LogOut, User } from "lucide-react";
+import { Leaf, LogOut, User, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Link as ScrollLink } from "react-scroll";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/auth";
 
 export default function Heading() {
-  const [hasAccount, setHasAccount] = useState(false);
+  const { currentUser } = useAuth();
 
   const router = useRouter();
 
@@ -70,12 +71,13 @@ export default function Heading() {
           </nav>
 
           <div className="flex items-center gap-4">
-            {hasAccount ? (
+            {currentUser ? (
               <button
-                className="p-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-300 text-primary-foreground"
+                className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-300 text-primary-foreground"
                 onClick={() => router.push("/dashboard")}
               >
                 Dashboard
+                <ArrowRight className="w-5 h-5 text-primary-foreground" />
               </button>
             ) : (
               <button
