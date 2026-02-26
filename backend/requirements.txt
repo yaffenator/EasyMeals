@@ -1,0 +1,5 @@
+firebase-admin
+google-cloud-firestore
+pytest
+pytest-cov
+python-dotenv
