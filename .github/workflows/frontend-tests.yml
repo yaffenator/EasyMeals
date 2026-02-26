@@ -2,7 +2,7 @@ name: frontend-tests
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "classes test/Dashboard"]
   pull_request:
 
 jobs:
