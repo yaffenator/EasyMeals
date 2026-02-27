@@ -4,6 +4,26 @@ import '@testing-library/jest-dom';
 import Dashboard from '../page';
 import { loadMealPlan, clearMealPlan } from '../../utils/MealPlanGenerator';
 
+// 1. Mock Firebase Auth Functions
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn().mockResolvedValue({ 
+    user: { uid: '123', email: 'test@test.com' } 
+  }),
+  signInWithEmailAndPassword: jest.fn().mockResolvedValue({ 
+    user: { uid: '123', email: 'test@test.com' } 
+  }),
+  updateProfile: jest.fn().mockResolvedValue(undefined),
+  onAuthStateChanged: jest.fn(),
+}));
+
+// 2. Mock your Auth Context (Adjust the import path if needed based on your folder structure)
+jest.mock('../../context/auth', () => ({
+  useAuth: jest.fn().mockReturnValue({ 
+    currentUser: { displayName: 'Test User', email: 'test@test.com' } 
+  }),
+}));
+
 // Mock the utils
 jest.mock('../../utils/MealPlanGenerator', () => ({
   ...jest.requireActual('../../utils/MealPlanGenerator'),
