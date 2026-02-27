@@ -4,29 +4,39 @@ import '@testing-library/jest-dom';
 import Dashboard from '../page';
 import { loadMealPlan, clearMealPlan } from '../../utils/MealPlanGenerator';
 
-// 1. Mock Firebase Auth Functions
-jest.mock('firebase/auth', () => ({
+// Mock Firebase Auth Functions
+jest.mock("firebase/auth", () => ({
   getAuth: jest.fn(),
-  createUserWithEmailAndPassword: jest.fn().mockResolvedValue({ 
-    user: { uid: '123', email: 'test@test.com' } 
+  GoogleAuthProvider: jest.fn(),
+  GithubAuthProvider: jest.fn(),
+  createUserWithEmailAndPassword: jest.fn().mockResolvedValue({
+    user: { uid: "123", email: "test@test.com" },
   }),
-  signInWithEmailAndPassword: jest.fn().mockResolvedValue({ 
-    user: { uid: '123', email: 'test@test.com' } 
+  signInWithEmailAndPassword: jest.fn().mockResolvedValue({
+    user: { uid: "123", email: "test@test.com" },
+  }),
+  signInWithPopup: jest.fn().mockResolvedValue({
+    user: {
+      uid: "google-123",
+      email: "testuser@gmail.com",
+      displayName: "Google Test User",
+      photoURL: "https://example.com/avatar.jpg", // Added this just in case you want to test profile pictures later!
+    },
   }),
   updateProfile: jest.fn().mockResolvedValue(undefined),
   onAuthStateChanged: jest.fn(),
 }));
 
-// 2. Mock your Auth Context (Adjust the import path if needed based on your folder structure)
-jest.mock('../../context/auth', () => ({
-  useAuth: jest.fn().mockReturnValue({ 
-    currentUser: { displayName: 'Test User', email: 'test@test.com' } 
+// Mock your Auth Context (Adjust the import path if needed based on your folder structure)
+jest.mock("../../context/auth", () => ({
+  useAuth: jest.fn().mockReturnValue({
+    currentUser: { displayName: "Test User", email: "test@test.com" },
   }),
 }));
 
 // Mock the utils
-jest.mock('../../utils/MealPlanGenerator', () => ({
-  ...jest.requireActual('../../utils/MealPlanGenerator'),
+jest.mock("../../utils/MealPlanGenerator", () => ({
+  ...jest.requireActual("../../utils/MealPlanGenerator"),
   loadMealPlan: jest.fn(),
   clearMealPlan: jest.fn(),
   saveMealPlan: jest.fn(),
@@ -36,14 +46,25 @@ jest.mock('../../utils/MealPlanGenerator', () => ({
       {
         weekNumber: 1,
         meals: [
-          { id: '1', day: 'Monday', name: 'Test Meal', description: 'A test meal', image: 'https://example.com/image.jpg', prepTime: '30 min', cost: '$10', servings: 4, calories: 500, category: 'Dinner' }
-        ]
-      }
-    ]
-  })
+          {
+            id: "1",
+            day: "Monday",
+            name: "Test Meal",
+            description: "A test meal",
+            image: "https://example.com/image.jpg",
+            prepTime: "30 min",
+            cost: "$10",
+            servings: 4,
+            calories: 500,
+            category: "Dinner",
+          },
+        ],
+      },
+    ],
+  }),
 }));
 
-describe('Dashboard Page', () => {
+describe("Dashboard Page", () => {
   beforeEach(() => {
     (loadMealPlan as jest.Mock).mockClear();
     (clearMealPlan as jest.Mock).mockClear();
@@ -53,37 +74,56 @@ describe('Dashboard Page', () => {
     (loadMealPlan as jest.Mock).mockReturnValue(null);
     render(<Dashboard />);
 
-    expect(screen.getByText('Welcome to Your Meal Planner')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Create Your Meal Plan/i })).toBeInTheDocument();
+    expect(
+      screen.getByText("Welcome to Your Meal Planner"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Create Your Meal Plan/i }),
+    ).toBeInTheDocument();
   });
 
-  it('should show the meal plan details when a meal plan exists', () => {
+  it("should show the meal plan details when a meal plan exists", () => {
     (loadMealPlan as jest.Mock).mockReturnValue({
       preferences: { monthlyBudget: 500 },
       weeks: [
         {
           weekNumber: 1,
           meals: [
-            { id: '1', day: 'Monday', name: 'Test Meal', description: 'A test meal', image: 'https://example.com/image.jpg', prepTime: '30 min', cost: '$10', servings: 4, calories: 500, category: 'Dinner' }
-          ]
-        }
-      ]
+            {
+              id: "1",
+              day: "Monday",
+              name: "Test Meal",
+              description: "A test meal",
+              image: "https://example.com/image.jpg",
+              prepTime: "30 min",
+              cost: "$10",
+              servings: 4,
+              calories: 500,
+              category: "Dinner",
+            },
+          ],
+        },
+      ],
     });
     render(<Dashboard />);
 
-    expect(screen.getByText('Your Meal Plan')).toBeInTheDocument();
-    expect(screen.getByText('Weekly Cost')).toBeInTheDocument();
-    expect(screen.getByText('Avg. Cost Per Meal')).toBeInTheDocument();
+    expect(screen.getByText("Your Meal Plan")).toBeInTheDocument();
+    expect(screen.getByText("Weekly Cost")).toBeInTheDocument();
+    expect(screen.getByText("Avg. Cost Per Meal")).toBeInTheDocument();
   });
 
   it('should open the wizard when "Create Your Meal Plan" is clicked', () => {
     (loadMealPlan as jest.Mock).mockReturnValue(null);
     render(<Dashboard />);
 
-    const createButton = screen.getByRole('button', { name: /Create Your Meal Plan/i });
+    const createButton = screen.getByRole("button", {
+      name: /Create Your Meal Plan/i,
+    });
     fireEvent.click(createButton);
 
     // The wizard has a title "Create Your Meal Plan"
-    expect(screen.getByRole('heading', { name: 'Create Your Meal Plan' })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Create Your Meal Plan" }),
+    ).toBeInTheDocument();
   });
 });
