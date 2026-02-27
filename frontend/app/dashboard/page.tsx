@@ -80,7 +80,8 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
-              Welcome, {currentUser?.displayName}!
+              Welcome,{" "}
+              {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
             </h1>
             <h2 className="text-2xl md:text-2xl text-primary mb-4">
               Let's Create Your Meal Planner
@@ -125,7 +126,9 @@ export default function Dashboard() {
         {/* Header Section */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
-            Hello, {currentUser?.displayName}! Your Meal Plan is Here.
+            Hello,{" "}
+            {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
+            Your Meal Plan is Here.
           </h1>
           <p className="text-muted-foreground">
             Personalized recipes optimized for your $

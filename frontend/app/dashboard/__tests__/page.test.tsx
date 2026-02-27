@@ -1,8 +1,8 @@
-import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import Dashboard from '../page';
-import { loadMealPlan, clearMealPlan } from '../../utils/MealPlanGenerator';
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import Dashboard from "../page";
+import { loadMealPlan, clearMealPlan } from "../../utils/MealPlanGenerator";
 
 // Mock Firebase Auth Functions
 jest.mock("firebase/auth", () => ({
