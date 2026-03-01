@@ -46,13 +46,13 @@ export async function POST(request: Request) {
     
 */
     const prompt = `
-      You are a nutritionist and database architect. Create a 3 day meal plan, just focusing on making dinners.
+      You are a nutritionist and database architect. Create a 1 day meal plan, just focusing on making dinners.
       use these preferneces to guide the meal plan, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
       BUDGET RULE: Total cost must not exceed 60% of $${preferences.monthlyBudget}.
 
       OUTPUT FORMAT: Return a JSON object with the key: "mealPlan"
 
-      1. "mealPlan": A 3-day plan. Each meal must follow our Firebase Recipe Schema:
+      1. "mealPlan": A 1-day plan. Each meal must follow our Firebase Recipe Schema:
          - "name", "calories", "carbs", "fat", "protein", "prepTime", "cookTime", "servings", "costPerServing", "totalCost", "mealType", "difficulty", "instructions", "tags", "tips", "source": "generated"
          - "ingredientItems": An array of maps: { "ingredientId": "snake_case_id", "originalText": "string", "quantity": number, "unit": "string", "notes": "string" }
          - "ingredients": A simple string array of the items.

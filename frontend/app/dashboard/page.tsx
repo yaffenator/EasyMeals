@@ -10,7 +10,7 @@ import ImageWithFallback from '../components/Figma/imageWithFallback';
 import { MealPlanWizard, MealPlanData } from '../components/MealPlanWizard';
 import Link from 'next/link';
 import { Clock, DollarSign, Users, ChefHat, Calendar } from 'lucide-react';
-import { generateMealPlan, saveMealPlan, loadMealPlan, clearMealPlan, FullMealPlan } from '../utils/MealPlanGenerator';
+import { generateMealPlan, saveMealPlan, clearMealPlan, FullMealPlan } from '../utils/MealPlanGenerator';
 
 export default function Dashboard() {
   const [mealPlan, setMealPlan] = useState<FullMealPlan | null>(null);
@@ -18,10 +18,8 @@ export default function Dashboard() {
   const [selectedWeek, setSelectedWeek] = useState(1);
 
   useEffect(() => {
-    const existingPlan = loadMealPlan();
-    if (existingPlan) {
-      setMealPlan(existingPlan);
-    }
+    // Always clear any stored plan so dashboard starts empty
+    clearMealPlan();
   }, []);
 
   const handleCreateMealPlan = (data: MealPlanData) => {

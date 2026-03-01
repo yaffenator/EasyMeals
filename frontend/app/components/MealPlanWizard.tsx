@@ -45,7 +45,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
     if (step < 5) {
       setStep(step + 1);
     } else {
-      setLoading(true);
+      setIsSaving(true);
       
       // --- THIS IS WHERE WE DEFINE finalData ---
       const finalData = {
@@ -71,7 +71,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         console.error("Error:", error);
         alert("Something went wrong. Check your console!");
       } finally {
-        setLoading(false);
+        setIsSaving(false);
       }
     }
   };
@@ -171,7 +171,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
             
             <Button onClick={handleNext} disabled={!canProceed() || isSaving} className="bg-primary">
               {isSaving ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...</>
               ) : (
                 <>{step === 5 ? 'Finish & Generate' : 'Next'} <ChevronRight className="w-4 h-4 ml-2" /></>
               )}
