@@ -1,0 +1,495 @@
+{
+  "mealPlan": [
+    {
+      "name": "Hearty Lentil & Sweet Potato Shepherd's Pie",
+      "calories": 680,
+      "carbs": 95,
+      "fat": 25,
+      "protein": 28,
+      "prepTime": 25,
+      "cookTime": 45,
+      "servings": 4,
+      "costPerServing": 2.9,
+      "totalCost": 11.6,
+      "mealType": "dinner",
+      "difficulty": "medium",
+      "instructions": [
+        "Preheat oven to 375°F (190°C).",
+        "Peel and chop sweet potatoes into 1-inch cubes. Boil in salted water for 15-20 minutes until very tender. Drain and mash with milk and butter/vegan spread until smooth. Season with salt and pepper.",
+        "While potatoes cook, heat olive oil in a large oven-safe skillet or Dutch oven over medium heat. Add diced onion, carrots, and celery. Sauté for 5-7 minutes until softened.",
+        "Add minced garlic, thyme, and rosemary. Cook for 1 minute until fragrant.",
+        "Stir in tomato paste and cook for another minute.",
+        "Add rinsed lentils and vegetable broth. Bring to a simmer, then reduce heat, cover, and cook for 20-25 minutes, or until lentils are tender and most of the liquid has been absorbed. Season with salt and pepper.",
+        "Spread the lentil mixture evenly in the skillet. Top with the mashed sweet potatoes, spreading them to the edges.",
+        "Bake for 20-25 minutes, or until the topping is lightly browned and the filling is bubbling. Let stand for 5 minutes before serving."
+      ],
+      "tags": [
+        "vegetarian",
+        "comfort food",
+        "budget-friendly",
+        "sweet potato",
+        "lentils",
+        "pie"
+      ],
+      "tips": [
+        "For a creamier topping, add a splash of plant-based milk or coconut milk to the sweet potatoes.",
+        "If you want a deeper flavor, add a teaspoon of smoked paprika to the lentil mixture.",
+        "Make ahead: Assemble the pie, cover, and refrigerate for up to 2 days. Bake as directed, adding 10-15 minutes to cook time."
+      ],
+      "source": "generated",
+      "ingredientItems": [
+        {
+          "ingredientId": "sweet_potato",
+          "originalText": "2 large sweet potatoes",
+          "quantity": 2,
+          "unit": "large",
+          "notes": ""
+        },
+        {
+          "ingredientId": "brown_lentils",
+          "originalText": "1 cup dry brown lentils, rinsed",
+          "quantity": 1,
+          "unit": "cup",
+          "notes": "dry, rinsed"
+        },
+        {
+          "ingredientId": "carrots",
+          "originalText": "2 medium carrots, diced",
+          "quantity": 2,
+          "unit": "medium",
+          "notes": "diced"
+        },
+        {
+          "ingredientId": "celery_stalks",
+          "originalText": "2 celery stalks, diced",
+          "quantity": 2,
+          "unit": "stalks",
+          "notes": "diced"
+        },
+        {
+          "ingredientId": "yellow_onion",
+          "originalText": "1 yellow onion, diced",
+          "quantity": 1,
+          "unit": "medium",
+          "notes": "diced"
+        },
+        {
+          "ingredientId": "garlic_cloves",
+          "originalText": "3 cloves garlic, minced",
+          "quantity": 3,
+          "unit": "cloves",
+          "notes": "minced"
+        },
+        {
+          "ingredientId": "vegetable_broth",
+          "originalText": "4 cups vegetable broth",
+          "quantity": 4,
+          "unit": "cup",
+          "notes": ""
+        },
+        {
+          "ingredientId": "tomato_paste",
+          "originalText": "2 tablespoons tomato paste",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "dried_thyme",
+          "originalText": "1 teaspoon dried thyme",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "dried_rosemary",
+          "originalText": "1/2 teaspoon dried rosemary",
+          "quantity": 0.5,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "olive_oil",
+          "originalText": "2 tablespoons olive oil",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "milk_or_plant_milk",
+          "originalText": "1/4 cup milk or plant-based milk",
+          "quantity": 0.25,
+          "unit": "cup",
+          "notes": "or plant-based milk"
+        },
+        {
+          "ingredientId": "butter_or_vegan_spread",
+          "originalText": "2 tablespoons butter or vegan spread",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": "or vegan spread"
+        },
+        {
+          "ingredientId": "salt",
+          "originalText": "Salt to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        },
+        {
+          "ingredientId": "black_pepper",
+          "originalText": "Black pepper to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        }
+      ],
+      "ingredients": [
+        "2 large sweet potatoes",
+        "1 cup dry brown lentils, rinsed",
+        "2 medium carrots, diced",
+        "2 celery stalks, diced",
+        "1 yellow onion, diced",
+        "3 cloves garlic, minced",
+        "4 cups vegetable broth",
+        "2 tablespoons tomato paste",
+        "1 teaspoon dried thyme",
+        "1/2 teaspoon dried rosemary",
+        "2 tablespoons olive oil",
+        "1/4 cup milk or plant-based milk",
+        "2 tablespoons butter or vegan spread",
+        "Salt to taste",
+        "Black pepper to taste"
+      ],
+      "createdAt": "2026-03-01T21:26:01.386Z",
+      "updatedAt": "2026-03-01T21:26:01.386Z"
+    },
+    {
+      "name": "Creamy Roasted Red Pepper & Mushroom Pasta",
+      "calories": 710,
+      "carbs": 90,
+      "fat": 32,
+      "protein": 20,
+      "prepTime": 20,
+      "cookTime": 35,
+      "servings": 4,
+      "costPerServing": 3.2,
+      "totalCost": 12.8,
+      "mealType": "dinner",
+      "difficulty": "medium",
+      "instructions": [
+        "Preheat oven to 400°F (200°C). Toss sliced red bell peppers and mushrooms with 1 tablespoon olive oil, salt, and pepper on a baking sheet. Roast for 20-25 minutes, or until tender and slightly charred.",
+        "While vegetables roast, cook pasta according to package directions. Reserve 1 cup of pasta water before draining.",
+        "In a large skillet or pot, heat the remaining 1 tablespoon olive oil over medium heat. Add diced onion and cook until softened, about 5 minutes.",
+        "Add minced garlic and cook for 1 minute until fragrant.",
+        "Stir in crushed tomatoes, vegetable broth, and dried basil. Bring to a simmer and cook for 5-7 minutes to allow flavors to meld.",
+        "Reduce heat to low. Stir in heavy cream (or cashew cream) and the roasted red peppers and mushrooms.",
+        "Add the drained pasta to the sauce. Toss to coat, adding reserved pasta water a little at a time if the sauce is too thick.",
+        "Serve hot, garnished with fresh basil (optional) or grated Parmesan (optional, if not vegan)."
+      ],
+      "tags": [
+        "vegetarian",
+        "pasta",
+        "creamy sauce",
+        "red pepper",
+        "mushrooms",
+        "comfort food"
+      ],
+      "tips": [
+        "For a vegan option, use plant-based cream (like full-fat coconut milk or cashew cream) and nutritional yeast instead of Parmesan.",
+        "To add a bit of spice, include a pinch of red pepper flakes with the garlic.",
+        "Roasting the vegetables intensifies their flavor and sweetness, making the sauce more robust."
+      ],
+      "source": "generated",
+      "ingredientItems": [
+        {
+          "ingredientId": "pasta",
+          "originalText": "1 pound (450g) pasta (e.g., penne, fettuccine)",
+          "quantity": 1,
+          "unit": "pound",
+          "notes": "e.g., penne, fettuccine"
+        },
+        {
+          "ingredientId": "red_bell_peppers",
+          "originalText": "2 large red bell peppers, sliced",
+          "quantity": 2,
+          "unit": "large",
+          "notes": "sliced"
+        },
+        {
+          "ingredientId": "cremini_mushrooms",
+          "originalText": "8 ounces cremini mushrooms, sliced",
+          "quantity": 8,
+          "unit": "ounce",
+          "notes": "sliced"
+        },
+        {
+          "ingredientId": "olive_oil",
+          "originalText": "2 tablespoons olive oil, divided",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": "divided"
+        },
+        {
+          "ingredientId": "yellow_onion",
+          "originalText": "1 yellow onion, diced",
+          "quantity": 1,
+          "unit": "medium",
+          "notes": "diced"
+        },
+        {
+          "ingredientId": "garlic_cloves",
+          "originalText": "4 cloves garlic, minced",
+          "quantity": 4,
+          "unit": "cloves",
+          "notes": "minced"
+        },
+        {
+          "ingredientId": "crushed_tomatoes",
+          "originalText": "1 (28 ounce) can crushed tomatoes",
+          "quantity": 1,
+          "unit": "can",
+          "notes": "28 ounce"
+        },
+        {
+          "ingredientId": "vegetable_broth",
+          "originalText": "1/2 cup vegetable broth",
+          "quantity": 0.5,
+          "unit": "cup",
+          "notes": ""
+        },
+        {
+          "ingredientId": "dried_basil",
+          "originalText": "1 teaspoon dried basil",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "heavy_cream",
+          "originalText": "1/2 cup heavy cream or plant-based cream",
+          "quantity": 0.5,
+          "unit": "cup",
+          "notes": "or plant-based cream"
+        },
+        {
+          "ingredientId": "salt",
+          "originalText": "Salt to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        },
+        {
+          "ingredientId": "black_pepper",
+          "originalText": "Black pepper to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        },
+        {
+          "ingredientId": "fresh_basil_for_garnish",
+          "originalText": "Fresh basil or grated Parmesan for garnish (optional)",
+          "quantity": 0,
+          "unit": "optional",
+          "notes": "for garnish (optional)"
+        }
+      ],
+      "ingredients": [
+        "1 pound (450g) pasta (e.g., penne, fettuccine)",
+        "2 large red bell peppers, sliced",
+        "8 ounces cremini mushrooms, sliced",
+        "2 tablespoons olive oil, divided",
+        "1 yellow onion, diced",
+        "4 cloves garlic, minced",
+        "1 (28 ounce) can crushed tomatoes",
+        "1/2 cup vegetable broth",
+        "1 teaspoon dried basil",
+        "1/2 cup heavy cream or plant-based cream",
+        "Salt to taste",
+        "Black pepper to taste",
+        "Fresh basil or grated Parmesan for garnish (optional)"
+      ],
+      "createdAt": "2026-03-01T21:26:01.386Z",
+      "updatedAt": "2026-03-01T21:26:01.386Z"
+    },
+    {
+      "name": "Spiced Chickpea & Cauliflower Curry with Basmati Rice",
+      "calories": 730,
+      "carbs": 105,
+      "fat": 28,
+      "protein": 24,
+      "prepTime": 20,
+      "cookTime": 30,
+      "servings": 4,
+      "costPerServing": 3.25,
+      "totalCost": 13,
+      "mealType": "dinner",
+      "difficulty": "medium",
+      "instructions": [
+        "Cook basmati rice according to package directions. Keep warm.",
+        "Heat olive oil in a large pot or Dutch oven over medium heat. Add diced onion and cook until softened, about 5 minutes.",
+        "Add minced garlic and grated ginger. Cook for 1 minute until fragrant.",
+        "Stir in curry powder (or paste), cumin, coriander, and turmeric. Cook for 1 minute, stirring constantly, until aromatic.",
+        "Add chopped cauliflower florets, canned crushed tomatoes, vegetable broth, and rinsed chickpeas. Bring to a simmer, then reduce heat, cover, and cook for 10-15 minutes, or until cauliflower is tender-crisp.",
+        "Stir in full-fat coconut milk and simmer for another 5 minutes, allowing the sauce to thicken slightly. Season with salt and pepper to taste.",
+        "Serve hot over basmati rice, garnished with fresh cilantro if desired (optional)."
+      ],
+      "tags": [
+        "vegetarian",
+        "curry",
+        "chickpeas",
+        "cauliflower",
+        "indian-inspired",
+        "coconut milk"
+      ],
+      "tips": [
+        "Adjust the spice level by adding more or less curry powder/paste and a pinch of cayenne pepper if you like heat.",
+        "For extra richness, a tablespoon of peanut butter can be stirred into the curry at the end.",
+        "This curry tastes even better the next day as the flavors have more time to meld. It's great for meal prepping."
+      ],
+      "source": "generated",
+      "ingredientItems": [
+        {
+          "ingredientId": "basmati_rice",
+          "originalText": "1 cup dry basmati rice",
+          "quantity": 1,
+          "unit": "cup",
+          "notes": ""
+        },
+        {
+          "ingredientId": "olive_oil",
+          "originalText": "2 tablespoons olive oil",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "yellow_onion",
+          "originalText": "1 yellow onion, diced",
+          "quantity": 1,
+          "unit": "medium",
+          "notes": "diced"
+        },
+        {
+          "ingredientId": "garlic_cloves",
+          "originalText": "3 cloves garlic, minced",
+          "quantity": 3,
+          "unit": "cloves",
+          "notes": "minced"
+        },
+        {
+          "ingredientId": "fresh_ginger",
+          "originalText": "1 inch fresh ginger, grated",
+          "quantity": 1,
+          "unit": "inch",
+          "notes": "grated"
+        },
+        {
+          "ingredientId": "curry_powder",
+          "originalText": "2 tablespoons curry powder (or 1 tbsp curry paste)",
+          "quantity": 2,
+          "unit": "tablespoon",
+          "notes": "or 1 tbsp curry paste"
+        },
+        {
+          "ingredientId": "ground_cumin",
+          "originalText": "1 teaspoon ground cumin",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "ground_coriander",
+          "originalText": "1 teaspoon ground coriander",
+          "quantity": 1,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "ground_turmeric",
+          "originalText": "1/2 teaspoon ground turmeric",
+          "quantity": 0.5,
+          "unit": "teaspoon",
+          "notes": ""
+        },
+        {
+          "ingredientId": "cauliflower",
+          "originalText": "1 medium head cauliflower, chopped into florets",
+          "quantity": 1,
+          "unit": "medium head",
+          "notes": "chopped into florets"
+        },
+        {
+          "ingredientId": "crushed_tomatoes",
+          "originalText": "1 (15 ounce) can crushed tomatoes",
+          "quantity": 1,
+          "unit": "can",
+          "notes": "15 ounce"
+        },
+        {
+          "ingredientId": "vegetable_broth",
+          "originalText": "1/2 cup vegetable broth",
+          "quantity": 0.5,
+          "unit": "cup",
+          "notes": ""
+        },
+        {
+          "ingredientId": "canned_chickpeas",
+          "originalText": "2 (15 ounce) cans chickpeas, drained and rinsed",
+          "quantity": 2,
+          "unit": "can",
+          "notes": "drained and rinsed"
+        },
+        {
+          "ingredientId": "full_fat_coconut_milk",
+          "originalText": "1 (13.5 ounce) can full-fat coconut milk",
+          "quantity": 1,
+          "unit": "can",
+          "notes": "13.5 ounce"
+        },
+        {
+          "ingredientId": "salt",
+          "originalText": "Salt to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        },
+        {
+          "ingredientId": "black_pepper",
+          "originalText": "Black pepper to taste",
+          "quantity": 0,
+          "unit": "taste",
+          "notes": ""
+        },
+        {
+          "ingredientId": "fresh_cilantro_for_garnish",
+          "originalText": "Fresh cilantro for garnish (optional)",
+          "quantity": 0,
+          "unit": "optional",
+          "notes": "for garnish (optional)"
+        }
+      ],
+      "ingredients": [
+        "1 cup dry basmati rice",
+        "2 tablespoons olive oil",
+        "1 yellow onion, diced",
+        "3 cloves garlic, minced",
+        "1 inch fresh ginger, grated",
+        "2 tablespoons curry powder (or 1 tbsp curry paste)",
+        "1 teaspoon ground cumin",
+        "1 teaspoon ground coriander",
+        "1/2 teaspoon ground turmeric",
+        "1 medium head cauliflower, chopped into florets",
+        "1 (15 ounce) can crushed tomatoes",
+        "1/2 cup vegetable broth",
+        "2 (15 ounce) cans chickpeas, drained and rinsed",
+        "1 (13.5 ounce) can full-fat coconut milk",
+        "Salt to taste",
+        "Black pepper to taste",
+        "Fresh cilantro for garnish (optional)"
+      ],
+      "createdAt": "2026-03-01T21:26:01.386Z",
+      "updatedAt": "2026-03-01T21:26:01.386Z"
+    }
+  ]
+}

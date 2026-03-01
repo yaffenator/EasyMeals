@@ -1,7 +1,9 @@
 {
-  "monthlyBudget": 333,
+  "monthlyBudget": 450,
   "goal": "maintain",
-  "currentWeight": 333,
+  "currentWeight": 150,
   "allergies": [],
-  "excludedCuisines": []
+  "excludedCuisines": [
+    "Any meals with meat or green vegitables"
+  ]
 }

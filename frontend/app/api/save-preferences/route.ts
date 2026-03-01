@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         model: "gemini-2.5-flash",
         generationConfig: { responseMimeType: "application/json" }
     });
-
+/*
     const prompt = `
       You are a nutritionist and database architect. Create a 4-week meal plan, just focusing on making dinners.
       Use these preferneces to guide the meal plan, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
@@ -43,15 +43,35 @@ export async function POST(request: Request) {
 
       Ensure all ingredientIds are consistent between the recipes and the newIngredients list.
     `;
+    
+*/
+    const prompt = `
+      You are a nutritionist and database architect. Create a 3 day meal plan, just focusing on making dinners.
+      use these preferneces to guide the meal plan, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
+      BUDGET RULE: Total cost must not exceed 60% of $${preferences.monthlyBudget}.
+
+      OUTPUT FORMAT: Return a JSON object with the key: "mealPlan"
+
+      1. "mealPlan": A 3-day plan. Each meal must follow our Firebase Recipe Schema:
+         - "name", "calories", "carbs", "fat", "protein", "prepTime", "cookTime", "servings", "costPerServing", "totalCost", "mealType", "difficulty", "instructions", "tags", "tips", "source": "generated"
+         - "ingredientItems": An array of maps: { "ingredientId": "snake_case_id", "originalText": "string", "quantity": number, "unit": "string", "notes": "string" }
+         - "ingredients": A simple string array of the items.
+         - "createdAt": "${timestamp}", "updatedAt": "${timestamp}"
+    `;
 
     const result = await model.generateContent(prompt);
     const responseData = JSON.parse(result.response.text());
+
+    // Save user preferences to user-preferences.json
+    fs.writeFileSync(path.join(process.cwd(), 'user-preferences.json'), JSON.stringify(preferences, null, 2));
 
     // Save locally for your review in VS Code
     fs.writeFileSync(path.join(process.cwd(), 'ai-response.json'), JSON.stringify(responseData, null, 2));
 
     return NextResponse.json(responseData);
   } catch (error) {
-    return NextResponse.json({ error: 'Generation failed' }, { status: 500 });
+    console.error('Save preferences error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: 'Generation failed', details: errorMessage }, { status: 500 });
   }
 }
