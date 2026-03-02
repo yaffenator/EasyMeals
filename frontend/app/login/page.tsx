@@ -1,11 +1,3 @@
-// export default function Login() {
-//   return (
-//     <div>
-//       <h1 className="text-3xl font-bold text-center mt-10">Login Page</h1>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useState } from "react";
@@ -27,7 +19,12 @@ import {
 import { ChefHat, Mail, Lock, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoginHeading from "../components/login-heading";
-import { loginUser, registerUser } from "../firebase";
+import {
+  loginUser,
+  registerUser,
+  loginWithGoogle,
+  loginWithGithub,
+} from "../firebase";
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,6 +36,7 @@ export default function AuthPage() {
 
   const router = useRouter();
 
+  // Handle basic email/password login with error handling for common Firebase Auth errors
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -65,6 +63,38 @@ export default function AuthPage() {
     }
   };
 
+  // Handle Google Sign-In with error handling for popup closure and cancellation
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      await loginWithGoogle();
+      router.push("/dashboard");
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        setError("Failed to sign in with Google. Please try again.");
+        console.error("Google sign-in error:", err);
+      }
+    }
+  };
+
+  // Handle GitHub Sign-In with error handling for popup closure and cancellation
+  const handleGithubSignIn = async () => {
+    setError(null);
+    try {
+      await loginWithGithub();
+      router.push("/dashboard");
+    } catch (err: any) {
+      if (
+        err.code !== "auth/popup-closed-by-user" &&
+        err.code !== "auth/cancelled-popup-request"
+      ) {
+        setError("Failed to sign in with GitHub. Please try again.");
+        console.error("GitHub sign-in error:", err);
+      }
+    }
+  };
+
+  // Handle user registration with email/password and error handling for common Firebase Auth errors
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -308,6 +338,7 @@ export default function AuthPage() {
                   className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
                   type="button"
                   disabled={isLoading}
+                  onClick={handleGoogleSignIn}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -336,6 +367,7 @@ export default function AuthPage() {
                   className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
                   type="button"
                   disabled={isLoading}
+                  onClick={handleGithubSignIn}
                 >
                   <svg
                     className="mr-2 h-4 w-4"
