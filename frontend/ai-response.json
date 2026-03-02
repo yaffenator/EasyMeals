@@ -1,145 +1,126 @@
 {
   "mealPlan": [
     {
-      "name": "Creamy Garlic Chicken & Mushroom Pasta",
-      "calories": 780,
-      "carbs": 95,
-      "fat": 38,
-      "protein": 55,
-      "prepTime": "20 minutes",
+      "name": "Baked Salmon with Roasted Asparagus and Quinoa",
+      "calories": 620,
+      "carbs": 45,
+      "fat": 25,
+      "protein": 42,
+      "prepTime": "15 minutes",
       "cookTime": "25 minutes",
-      "servings": 4,
-      "costPerServing": 3.75,
-      "totalCost": 15,
+      "servings": 2,
+      "costPerServing": 8.5,
+      "totalCost": 17,
       "mealType": "Dinner",
       "difficulty": "Medium",
       "instructions": [
-        "Cook pasta according to package directions until al dente. Reserve 1/2 cup of pasta water, then drain and set aside.",
-        "While pasta cooks, season chicken breasts with salt and pepper. In a large skillet over medium-high heat, add 1 tablespoon olive oil. Add chicken and cook for 5-7 minutes per side, or until golden brown and cooked through. Remove chicken from skillet and set aside to rest, then slice into bite-sized pieces.",
-        "In the same skillet, add the remaining 1 tablespoon olive oil. Add sliced mushrooms and cook for 5-7 minutes until softened and browned. Add minced garlic and chopped onion, cook for another 2-3 minutes until fragrant.",
-        "Pour in the chicken broth and bring to a simmer, scraping up any browned bits from the bottom of the pan. Stir in the heavy cream and grated Parmesan cheese. Reduce heat to low and simmer for 5 minutes, allowing the sauce to thicken slightly.",
-        "Add the cooked pasta and sliced chicken back into the skillet with the sauce. Toss to combine, adding a splash of the reserved pasta water if needed to reach desired consistency.",
-        "Stir in fresh chopped parsley. Taste and adjust seasoning with salt and pepper as needed.",
-        "Serve hot, garnished with extra Parmesan cheese if desired."
+        "Preheat oven to 400°F (200°C). Line a baking sheet with parchment paper.",
+        "Rinse quinoa under cold water. In a small saucepan, combine quinoa with 1.5 cups vegetable broth or water. Bring to a boil, then reduce heat to low, cover, and simmer for 15 minutes, or until all liquid is absorbed. Fluff with a fork.",
+        "Trim the woody ends off the asparagus. Toss asparagus with 1 tablespoon olive oil, salt, and pepper on the prepared baking sheet.",
+        "Pat salmon fillets dry with a paper towel. Place them on the same baking sheet alongside the asparagus. Drizzle salmon with remaining 0.5 tablespoon olive oil, sprinkle with garlic powder, dried dill (if using), salt, and pepper. Top each fillet with a lemon slice.",
+        "Roast for 12-15 minutes, or until salmon is cooked through and flakes easily with a fork, and asparagus is tender-crisp.",
+        "Serve salmon and asparagus immediately with a side of fluffy quinoa. Squeeze fresh lemon juice over the salmon if desired."
       ],
       "tags": [
-        "chicken",
-        "pasta",
-        "creamy",
-        "mushrooms",
-        "comfort food",
-        "high protein",
-        "high calorie",
-        "dinner"
+        "fish",
+        "healthy",
+        "dinner",
+        "quick",
+        "gluten-free",
+        "omega-3"
       ],
       "tips": [
-        "For an even richer sauce, add a tablespoon of cream cheese along with the heavy cream.",
-        "To save time, use pre-sliced mushrooms and pre-minced garlic.",
-        "Leftovers can be stored in an airtight container in the refrigerator for up to 3 days. Reheat gently on the stovetop or microwave, adding a splash of milk or broth if the sauce has thickened too much."
+        "For extra flavor, add a sprinkle of red pepper flakes to the asparagus before roasting.",
+        "You can substitute other quick-cooking vegetables like broccoli or green beans for asparagus.",
+        "Ensure your salmon is fully defrosted if using frozen fillets for even cooking."
       ],
       "source": "generated",
       "ingredientItems": [
         {
-          "ingredientId": "fettuccine_pasta",
-          "originalText": "12 oz fettuccine or preferred pasta",
-          "quantity": 12,
-          "unit": "oz",
-          "notes": "or preferred pasta"
+          "ingredientId": "salmon_fillets",
+          "originalText": "2 (4 oz / 113g each) salmon fillets",
+          "quantity": 2,
+          "unit": "fillet",
+          "notes": "skin-on or off"
         },
         {
-          "ingredientId": "chicken_breast",
-          "originalText": "1.5 lbs boneless, skinless chicken breasts",
+          "ingredientId": "asparagus",
+          "originalText": "1 bunch (about 1 lb / 450g) asparagus",
+          "quantity": 1,
+          "unit": "bunch",
+          "notes": "trimmed"
+        },
+        {
+          "ingredientId": "quinoa",
+          "originalText": "0.75 cup uncooked quinoa",
+          "quantity": 0.75,
+          "unit": "cup",
+          "notes": "rinsed"
+        },
+        {
+          "ingredientId": "vegetable_broth_water",
+          "originalText": "1.5 cups vegetable broth or water",
           "quantity": 1.5,
-          "unit": "lbs",
-          "notes": "boneless, skinless"
-        },
-        {
-          "ingredientId": "salt",
-          "originalText": "Salt, to taste",
-          "quantity": 1,
-          "unit": "to taste",
-          "notes": ""
-        },
-        {
-          "ingredientId": "black_pepper",
-          "originalText": "Black pepper, to taste",
-          "quantity": 1,
-          "unit": "to taste",
+          "unit": "cup",
           "notes": ""
         },
         {
           "ingredientId": "olive_oil",
-          "originalText": "2 tbsp olive oil",
-          "quantity": 2,
+          "originalText": "1.5 tbsp olive oil",
+          "quantity": 1.5,
           "unit": "tbsp",
           "notes": ""
         },
         {
-          "ingredientId": "cremini_mushrooms",
-          "originalText": "8 oz cremini mushrooms, sliced",
-          "quantity": 8,
-          "unit": "oz",
-          "notes": "sliced"
-        },
-        {
-          "ingredientId": "garlic",
-          "originalText": "4 cloves garlic, minced",
-          "quantity": 4,
-          "unit": "cloves",
-          "notes": "minced"
-        },
-        {
-          "ingredientId": "yellow_onion",
-          "originalText": "1/2 small yellow onion, finely chopped",
-          "quantity": 0.5,
-          "unit": "small",
-          "notes": "finely chopped"
-        },
-        {
-          "ingredientId": "chicken_broth",
-          "originalText": "1/2 cup chicken broth",
-          "quantity": 0.5,
-          "unit": "cup",
-          "notes": ""
-        },
-        {
-          "ingredientId": "heavy_cream",
-          "originalText": "1 cup heavy cream",
+          "ingredientId": "lemon",
+          "originalText": "1 lemon",
           "quantity": 1,
-          "unit": "cup",
+          "unit": "",
+          "notes": "sliced, plus extra for serving"
+        },
+        {
+          "ingredientId": "garlic_powder",
+          "originalText": "1 tsp garlic powder",
+          "quantity": 1,
+          "unit": "tsp",
           "notes": ""
         },
         {
-          "ingredientId": "parmesan_cheese",
-          "originalText": "1/2 cup grated Parmesan cheese, plus more for garnish",
-          "quantity": 0.5,
-          "unit": "cup",
-          "notes": "plus more for garnish"
+          "ingredientId": "dried_dill",
+          "originalText": "1 tsp dried dill (optional)",
+          "quantity": 1,
+          "unit": "tsp",
+          "notes": ""
         },
         {
-          "ingredientId": "fresh_parsley",
-          "originalText": "1/4 cup fresh parsley, chopped",
-          "quantity": 0.25,
-          "unit": "cup",
-          "notes": "chopped"
+          "ingredientId": "salt",
+          "originalText": "Salt, to taste",
+          "quantity": 0,
+          "unit": "",
+          "notes": "to taste"
+        },
+        {
+          "ingredientId": "black_pepper",
+          "originalText": "Black pepper, to taste",
+          "quantity": 0,
+          "unit": "",
+          "notes": "to taste"
         }
       ],
       "ingredients": [
-        "12 oz fettuccine or preferred pasta",
-        "1.5 lbs boneless, skinless chicken breasts",
+        "2 (4 oz / 113g each) salmon fillets",
+        "1 bunch (about 1 lb / 450g) asparagus",
+        "0.75 cup uncooked quinoa",
+        "1.5 cups vegetable broth or water",
+        "1.5 tbsp olive oil",
+        "1 lemon",
+        "1 tsp garlic powder",
+        "1 tsp dried dill (optional)",
         "Salt, to taste",
-        "Black pepper, to taste",
-        "2 tbsp olive oil",
-        "8 oz cremini mushrooms, sliced",
-        "4 cloves garlic, minced",
-        "1/2 small yellow onion, finely chopped",
-        "1/2 cup chicken broth",
-        "1 cup heavy cream",
-        "1/2 cup grated Parmesan cheese, plus more for garnish",
-        "1/4 cup fresh parsley, chopped"
+        "Black pepper, to taste"
       ],
-      "createdAt": "2026-03-02T02:45:19.236Z",
-      "updatedAt": "2026-03-02T02:45:19.236Z"
+      "createdAt": "2026-03-02T03:09:44.725Z",
+      "updatedAt": "2026-03-02T03:09:44.725Z"
     }
   ]
 }

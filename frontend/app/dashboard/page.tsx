@@ -81,7 +81,7 @@ export default function Dashboard() {
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
               Welcome,{" "}
-              {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
+              {currentUser?.displayName || "Chef"}!
             </h1>
             <h2 className="text-2xl md:text-2xl text-primary mb-4">
               Let's Create Your Meal Planner
