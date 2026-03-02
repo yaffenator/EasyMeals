@@ -3,7 +3,6 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/dashboard-heading';
-import { Footer } from '../../components/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -309,7 +308,6 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

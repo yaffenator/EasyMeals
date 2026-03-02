@@ -1,12 +1,11 @@
 "use client";
 
-import { Leaf, LogOut, User } from "lucide-react";
+import { ArrowRight, Leaf, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { logoutUser } from "../firebase";
 
 export default function DashboardHeading() {
-  const [hasAccount, setHasAccount] = useState(true);
-
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto px-4">
@@ -25,26 +24,24 @@ export default function DashboardHeading() {
             >
               How It Works
             </Link> */}
-            <Link
+            {/* <Link
               href="/dashboard"
               className="text-foreground/80 hover:text-primary transition-colors"
             >
               Dashboard
-            </Link>
+            </Link> */}
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/signin">
-              {hasAccount ? (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Dashboard
-                </button>
-              ) : (
-                <button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Create Account / Login
-                </button>
-              )}
-            </Link>
+            <button
+              onClick={() => {
+                logoutUser();
+              }}
+              className="flex items-center gap-1 py-2 px-4 rounded-lg bg-primary hover:bg-primary/90 hover:cursor-pointer transition-all duration-200 text-primary-foreground"
+            >
+              Sign Out
+              <ArrowRight className="w-5 h-5 text-primary-foreground" />
+            </button>
           </div>
         </div>
       </div>

@@ -1,11 +1,3 @@
-// export default function Login() {
-//   return (
-//     <div>
-//       <h1 className="text-3xl font-bold text-center mt-10">Login Page</h1>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useState } from "react";
@@ -27,30 +19,112 @@ import {
 import { ChefHat, Mail, Lock, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import LoginHeading from "../components/login-heading";
+import {
+  loginUser,
+  registerUser,
+  loginWithGoogle,
+  loginWithGithub,
+} from "../firebase";
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Handle basic email/password login with error handling for common Firebase Auth errors
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log("loggin the user in...");
     setIsLoading(true);
-    // Simulate login delay
-    setTimeout(() => {
-      setIsLoading(false);
+
+    // Call the loginUser function and handle any errors
+    try {
+      await loginUser(email, password);
+      // on successful login, redirect to dashboard
       router.push("/dashboard");
-    }, 1000);
+    } catch (err: any) {
+      // Map Firebase error codes to user-friendly messages
+      if (err.code === "auth/invalid-email") {
+        setError("No user found with this email address.");
+      } else if (err.code === "auth/wrong-password") {
+        setError("Incorrect password. Please try again.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
+      console.error("Error logging in user:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    // Simulate signup delay
-    setTimeout(() => {
-      setIsLoading(false);
+  // Handle Google Sign-In with error handling for popup closure and cancellation
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      await loginWithGoogle();
       router.push("/dashboard");
-    }, 1000);
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        setError("Failed to sign in with Google. Please try again.");
+        console.error("Google sign-in error:", err);
+      }
+    }
+  };
+
+  // Handle GitHub Sign-In with error handling for popup closure and cancellation
+  const handleGithubSignIn = async () => {
+    setError(null);
+    try {
+      await loginWithGithub();
+      router.push("/dashboard");
+    } catch (err: any) {
+      if (
+        err.code !== "auth/popup-closed-by-user" &&
+        err.code !== "auth/cancelled-popup-request"
+      ) {
+        setError("Failed to sign in with GitHub. Please try again.");
+        console.error("GitHub sign-in error:", err);
+      }
+    }
+  };
+
+  // Handle user registration with email/password and error handling for common Firebase Auth errors
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // check if both password fields match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    console.log("registering user...");
+    setIsLoading(true);
+
+    // Call the registerUser function and handle any errors
+    try {
+      await registerUser(email, password, name);
+      // on successful registration, redirect to dashboard
+      router.push("/dashboard");
+    } catch (err: any) {
+      // Map Firebase error codes to user-friendly messages
+      if (err.code === "auth/email-already-in-use") {
+        setError("This email is already registered.");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password is too weak. Please use at least 6 characters.");
+      } else {
+        setError("An unexpected error occurred. Please try again.");
+      }
+      console.error("Error registering user:", err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -105,6 +179,7 @@ export default function AuthPage() {
                           type="email"
                           placeholder="you@example.com"
                           className="pl-10"
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                         />
                       </div>
@@ -124,6 +199,7 @@ export default function AuthPage() {
                             type="password"
                             placeholder="••••••••"
                             className="pl-10"
+                            onChange={(e) => setPassword(e.target.value)}
                             required
                           />
                         </div>
@@ -136,6 +212,12 @@ export default function AuthPage() {
                         Forgot password?
                       </button>
                     </div>
+
+                    {error && (
+                      <div className="p-3 text-sm text-white bg-red-600 rounded-md text-center">
+                        {error}
+                      </div>
+                    )}
 
                     <button
                       type="submit"
@@ -161,6 +243,7 @@ export default function AuthPage() {
                           type="text"
                           placeholder="John Doe"
                           className="pl-10"
+                          onChange={(e) => setName(e.target.value)}
                           required
                         />
                       </div>
@@ -177,6 +260,7 @@ export default function AuthPage() {
                           type="email"
                           placeholder="you@example.com"
                           className="pl-10"
+                          onChange={(e) => setEmail(e.target.value)}
                           required
                         />
                       </div>
@@ -193,11 +277,12 @@ export default function AuthPage() {
                           type="password"
                           placeholder="••••••••"
                           className="pl-10"
+                          onChange={(e) => setPassword(e.target.value)}
                           required
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Must be at least 8 characters
+                        Must be at least 6 characters
                       </p>
                     </div>
 
@@ -212,10 +297,17 @@ export default function AuthPage() {
                           type="password"
                           placeholder="••••••••"
                           className="pl-10"
+                          onChange={(e) => setConfirmPassword(e.target.value)}
                           required
                         />
                       </div>
                     </div>
+
+                    {error && (
+                      <div className="p-3 text-sm text-white bg-red-600 rounded-md text-center">
+                        {error}
+                      </div>
+                    )}
 
                     <button
                       type="submit"
@@ -246,6 +338,7 @@ export default function AuthPage() {
                   className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
                   type="button"
                   disabled={isLoading}
+                  onClick={handleGoogleSignIn}
                 >
                   <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                     <path
@@ -274,6 +367,7 @@ export default function AuthPage() {
                   className="flex items-center justify-center bg-green-50 rounded-lg p-2 hover:bg-green-100 hover:cursor-pointer transition-colors duration-200"
                   type="button"
                   disabled={isLoading}
+                  onClick={handleGithubSignIn}
                 >
                   <svg
                     className="mr-2 h-4 w-4"
