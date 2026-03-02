@@ -128,7 +128,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
             <div className="space-y-4">
               <h3 className="text-xl font-medium">What is your current weight?</h3>
               <div className="space-y-2">
-                <Label htmlFor="weight">Weight (lbs or kg)</Label>
+                <Label htmlFor="weight">Weight (lbs)</Label>
                 <Input 
                   id="weight" type="number" placeholder="165" 
                   value={weight} onChange={(e) => setWeight(e.target.value)} 

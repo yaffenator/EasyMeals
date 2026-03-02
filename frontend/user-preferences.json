@@ -1,7 +1,11 @@
 {
-  "monthlyBudget": 292,
-  "goal": "maintain",
+  "monthlyBudget": 252,
+  "goal": "gain",
   "currentWeight": 155,
-  "allergies": [],
-  "excludedCuisines": []
+  "allergies": [
+    "Peanuts"
+  ],
+  "excludedCuisines": [
+    "Spicy"
+  ]
 }
