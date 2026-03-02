@@ -33,23 +33,17 @@ import {
 } from "../utils/MealPlanGenerator";
 import { useAuth } from "../context/auth";
 import { useRouter } from "next/navigation";
+import { updateUserPreferences, auth, db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function Dashboard() {
   const [mealPlan, setMealPlan] = useState<FullMealPlan | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
 
   const router = useRouter();
-
   const { currentUser } = useAuth();
-
-  useEffect(() => {
-    if (currentUser) {
-      console.log("Current user in Dashboard:", currentUser?.displayName);
-    } else {
-      router.push("/login");
-    }
-  }, [currentUser]);
 
   useEffect(() => {
     const existingPlan = loadMealPlan();
@@ -58,12 +52,65 @@ export default function Dashboard() {
     }
   }, []);
 
-  const handleCreateMealPlan = (data: MealPlanData) => {
-    const newPlan = generateMealPlan(data);
-    saveMealPlan(newPlan);
-    setMealPlan(newPlan);
-    setShowWizard(false);
-    setSelectedWeek(1);
+  // Check if the user has completed the meal plan questionnaire, redirect them to a different dashboard layout if not
+  useEffect(() => {
+    if (currentUser) {
+      console.log("Current user in Dashboard:", currentUser?.displayName);
+    } else {
+      router.push("/login");
+    }
+
+    const savedPlan = loadMealPlan();
+    if (savedPlan) {
+      setMealPlan(savedPlan);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    const checkQuestionnaireStatus = async () => {
+      const uid = currentUser?.uid || auth.currentUser?.uid;
+
+      if (uid) {
+        try {
+          const userRef = doc(db, "users", uid);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists()) {
+            const userData = userSnap.data();
+            const hasCompleted =
+              userData.mealPlanProfile?.questionnaireCompleted;
+
+            if (!hasCompleted) {
+              setQuestionnaireCompleted(false);
+            } else {
+              setQuestionnaireCompleted(true);
+            }
+          } else {
+            setQuestionnaireCompleted(false);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
+
+    checkQuestionnaireStatus();
+  }, [mealPlan]);
+
+  const handleCreateMealPlan = async (finalData: MealPlanData) => {
+    try {
+      // Generate and save the meal plan locally
+      const newPlan = generateMealPlan(finalData);
+      saveMealPlan(newPlan);
+
+      // This tells the UI to re-render and show the newly generated plan.
+      setMealPlan(newPlan);
+
+      // Hide the wizard overlay so the user can see their dashboard
+      setShowWizard(false);
+    } catch (error) {
+      console.error("Error creating meal plan:", error);
+    }
   };
 
   const handleGenerateNew = () => {
@@ -72,7 +119,7 @@ export default function Dashboard() {
     setShowWizard(true);
   };
 
-  if (!mealPlan) {
+  if (!questionnaireCompleted || !mealPlan) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
         <DashboardHeading />
@@ -80,8 +127,7 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
-              Welcome,{" "}
-              {currentUser?.displayName || "Chef"}!
+              Welcome, {currentUser?.displayName || "Chef"}!
             </h1>
             <h2 className="text-2xl md:text-2xl text-primary mb-4">
               Let's Create Your Meal Planner

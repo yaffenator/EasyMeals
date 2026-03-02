@@ -1,126 +1,123 @@
 {
   "mealPlan": [
     {
-      "name": "Baked Salmon with Roasted Asparagus and Quinoa",
-      "calories": 620,
-      "carbs": 45,
-      "fat": 25,
-      "protein": 42,
-      "prepTime": "15 minutes",
+      "name": "Lemon Herb Baked Salmon with Roasted Asparagus and Quinoa",
+      "calories": 639,
+      "carbs": 38,
+      "fat": 32,
+      "protein": 49,
+      "prepTime": "20 minutes",
       "cookTime": "25 minutes",
-      "servings": 2,
-      "costPerServing": 8.5,
-      "totalCost": 17,
+      "servings": 1,
+      "costPerServing": 13,
+      "totalCost": 13,
       "mealType": "Dinner",
-      "difficulty": "Medium",
-      "instructions": [
-        "Preheat oven to 400°F (200°C). Line a baking sheet with parchment paper.",
-        "Rinse quinoa under cold water. In a small saucepan, combine quinoa with 1.5 cups vegetable broth or water. Bring to a boil, then reduce heat to low, cover, and simmer for 15 minutes, or until all liquid is absorbed. Fluff with a fork.",
-        "Trim the woody ends off the asparagus. Toss asparagus with 1 tablespoon olive oil, salt, and pepper on the prepared baking sheet.",
-        "Pat salmon fillets dry with a paper towel. Place them on the same baking sheet alongside the asparagus. Drizzle salmon with remaining 0.5 tablespoon olive oil, sprinkle with garlic powder, dried dill (if using), salt, and pepper. Top each fillet with a lemon slice.",
-        "Roast for 12-15 minutes, or until salmon is cooked through and flakes easily with a fork, and asparagus is tender-crisp.",
-        "Serve salmon and asparagus immediately with a side of fluffy quinoa. Squeeze fresh lemon juice over the salmon if desired."
-      ],
+      "difficulty": "Easy",
+      "instructions": "1. Preheat oven to 400°F (200°C). In a small saucepan, combine 1/4 cup dry quinoa with 1/2 cup water or vegetable broth. Bring to a boil, then reduce heat to low, cover, and simmer for 15-20 minutes, or until all liquid is absorbed and quinoa is fluffy. Set aside.\n2. Wash asparagus and trim the tough ends. Toss with 1/2 tbsp olive oil, a pinch of salt, and pepper on a baking sheet.\n3. Pat salmon fillet dry with paper towels. In a small bowl, mix the remaining 1/2 tbsp olive oil, minced garlic, chopped dill, chopped parsley, lemon juice (from 1/4 lemon), salt, and pepper. Spread this mixture evenly over the top of the salmon fillet.\n4. Place the salmon fillet on the same baking sheet as the asparagus (or a separate small one). Roast in the preheated oven for 12-15 minutes, or until salmon is cooked through and flakes easily with a fork, and asparagus is tender-crisp.\n5. Serve the baked salmon and roasted asparagus immediately alongside the cooked quinoa. Garnish with fresh lemon slices (from the remaining 1/4 lemon) if desired.",
       "tags": [
-        "fish",
-        "healthy",
-        "dinner",
-        "quick",
-        "gluten-free",
-        "omega-3"
+        "Fish",
+        "Healthy",
+        "Weight Loss",
+        "Mediterranean",
+        "Gluten-Free",
+        "Dairy-Free"
       ],
-      "tips": [
-        "For extra flavor, add a sprinkle of red pepper flakes to the asparagus before roasting.",
-        "You can substitute other quick-cooking vegetables like broccoli or green beans for asparagus.",
-        "Ensure your salmon is fully defrosted if using frozen fillets for even cooking."
-      ],
+      "tips": "For an extra flavor boost, try adding a sprinkle of chili flakes to the salmon before baking if you tolerate a mild warmth, or use smoked paprika for a non-spicy alternative. Leftover quinoa can be stored in the fridge for up to 3-4 days and used in salads or as a side dish. Ensure your salmon is completely thawed if using frozen.",
       "source": "generated",
       "ingredientItems": [
         {
-          "ingredientId": "salmon_fillets",
-          "originalText": "2 (4 oz / 113g each) salmon fillets",
-          "quantity": 2,
-          "unit": "fillet",
-          "notes": "skin-on or off"
+          "ingredientId": "salmon_fillet",
+          "originalText": "6 oz salmon fillet",
+          "quantity": 6,
+          "unit": "oz",
+          "notes": "skin on or off, your preference"
         },
         {
-          "ingredientId": "asparagus",
-          "originalText": "1 bunch (about 1 lb / 450g) asparagus",
-          "quantity": 1,
-          "unit": "bunch",
+          "ingredientId": "asparagus_spears",
+          "originalText": "1/2 lb asparagus spears",
+          "quantity": 0.5,
+          "unit": "lb",
           "notes": "trimmed"
         },
         {
-          "ingredientId": "quinoa",
-          "originalText": "0.75 cup uncooked quinoa",
-          "quantity": 0.75,
-          "unit": "cup",
-          "notes": "rinsed"
-        },
-        {
-          "ingredientId": "vegetable_broth_water",
-          "originalText": "1.5 cups vegetable broth or water",
-          "quantity": 1.5,
+          "ingredientId": "quinoa_dry",
+          "originalText": "1/4 cup dry quinoa",
+          "quantity": 0.25,
           "unit": "cup",
           "notes": ""
         },
         {
-          "ingredientId": "olive_oil",
-          "originalText": "1.5 tbsp olive oil",
-          "quantity": 1.5,
-          "unit": "tbsp",
+          "ingredientId": "water_or_broth",
+          "originalText": "1/2 cup water or vegetable broth",
+          "quantity": 0.5,
+          "unit": "cup",
           "notes": ""
         },
         {
           "ingredientId": "lemon",
-          "originalText": "1 lemon",
-          "quantity": 1,
-          "unit": "",
-          "notes": "sliced, plus extra for serving"
+          "originalText": "1/2 lemon",
+          "quantity": 0.5,
+          "unit": "whole",
+          "notes": "half sliced, half juiced"
         },
         {
-          "ingredientId": "garlic_powder",
-          "originalText": "1 tsp garlic powder",
+          "ingredientId": "olive_oil",
+          "originalText": "1 tbsp olive oil",
           "quantity": 1,
-          "unit": "tsp",
-          "notes": ""
+          "unit": "tbsp",
+          "notes": "divided"
         },
         {
-          "ingredientId": "dried_dill",
-          "originalText": "1 tsp dried dill (optional)",
+          "ingredientId": "garlic_cloves",
+          "originalText": "2 cloves garlic",
+          "quantity": 2,
+          "unit": "cloves",
+          "notes": "minced"
+        },
+        {
+          "ingredientId": "fresh_dill",
+          "originalText": "1 tbsp fresh dill",
           "quantity": 1,
-          "unit": "tsp",
-          "notes": ""
+          "unit": "tbsp",
+          "notes": "chopped"
+        },
+        {
+          "ingredientId": "fresh_parsley",
+          "originalText": "1 tbsp fresh parsley",
+          "quantity": 1,
+          "unit": "tbsp",
+          "notes": "chopped"
         },
         {
           "ingredientId": "salt",
-          "originalText": "Salt, to taste",
-          "quantity": 0,
-          "unit": "",
+          "originalText": "1/2 tsp salt",
+          "quantity": 0.5,
+          "unit": "tsp",
           "notes": "to taste"
         },
         {
           "ingredientId": "black_pepper",
-          "originalText": "Black pepper, to taste",
-          "quantity": 0,
-          "unit": "",
+          "originalText": "1/4 tsp black pepper",
+          "quantity": 0.25,
+          "unit": "tsp",
           "notes": "to taste"
         }
       ],
       "ingredients": [
-        "2 (4 oz / 113g each) salmon fillets",
-        "1 bunch (about 1 lb / 450g) asparagus",
-        "0.75 cup uncooked quinoa",
-        "1.5 cups vegetable broth or water",
-        "1.5 tbsp olive oil",
-        "1 lemon",
-        "1 tsp garlic powder",
-        "1 tsp dried dill (optional)",
-        "Salt, to taste",
-        "Black pepper, to taste"
+        "6 oz salmon fillet",
+        "1/2 lb asparagus spears",
+        "1/4 cup dry quinoa",
+        "1/2 cup water or vegetable broth",
+        "1/2 lemon",
+        "1 tbsp olive oil",
+        "2 cloves garlic",
+        "1 tbsp fresh dill",
+        "1 tbsp fresh parsley",
+        "1/2 tsp salt",
+        "1/4 tsp black pepper"
       ],
-      "createdAt": "2026-03-02T03:09:44.725Z",
-      "updatedAt": "2026-03-02T03:09:44.725Z"
+      "createdAt": "2026-03-02T04:36:47.114Z",
+      "updatedAt": "2026-03-02T04:36:47.114Z"
     }
   ]
 }
