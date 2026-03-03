@@ -5,37 +5,44 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Grilled Lemon Herb Chicken with Quinoa",
+          "name": "Lemon Herb Roasted Chicken",
+          "description": "Roasted chicken thighs seasoned with lemon, rosemary, and garlic served with brown rice.",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Beef Tacos with Fresh Salsa and Avocado",
+          "name": "Beef and Broccoli Stir-fry",
+          "description": "Lean beef strips and fresh broccoli florets tossed in a soy-ginger sauce over white rice.",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Creamy Basil Pesto Pasta with Sun-Dried Tomatoes",
+          "name": "Spaghetti Bolognese",
+          "description": "Classic pasta topped with a hearty ground beef and tomato herb sauce.",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Chicken Stir-fry with Broccoli and Cashews",
+          "name": "Black Bean and Corn Tacos",
+          "description": "Corn tortillas filled with seasoned black beans, sweet corn, and fresh lime salsa.",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Homemade Margherita Pizza",
+          "name": "Pan-Seared Tilapia",
+          "description": "Lightly seasoned tilapia fillets served with a side of steamed green beans and quinoa.",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Slow-Roasted Beef Pot Roast with Carrots",
+          "name": "Homemade Vegetable Pizza",
+          "description": "Thin crust pizza topped with marinara, mozzarella, bell peppers, and red onions.",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Vegetable Lasagna with Ricotta and Spinach",
+          "name": "Lentil Stew",
+          "description": "A thick, protein-rich stew made with brown lentils, carrots, celery, and potatoes.",
           "status": "pending"
         }
       ]
@@ -45,37 +52,44 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Turkey and Black Bean Chili",
+          "name": "Grilled Chicken Caesar Salad",
+          "description": "Fresh romaine lettuce topped with grilled chicken breast, croutons, and parmesan (no peanuts).",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Pan-Seared Steak with Garlic Butter Mushrooms",
+          "name": "Turkey Stuffed Bell Peppers",
+          "description": "Bell peppers packed with ground turkey, rice, and tomato sauce, baked until tender.",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Wild Mushroom Risotto with Parmesan",
+          "name": "Creamy Tomato Basil Pasta",
+          "description": "Penne pasta tossed in a smooth tomato cream sauce with fresh basil leaves.",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Chicken Parmesan with Zucchini Noodles",
+          "name": "Sheet Pan Sausage and Peppers",
+          "description": "Roasted Italian sausages with colorful bell peppers and sliced yellow onions.",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Classic Beef Burgers with Sweet Potato Fries",
+          "name": "Baked Cod with Lemon",
+          "description": "Flaky cod fillets baked with lemon slices and served with roasted asparagus.",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Herb-Crusted Lamb Chops with Asparagus",
+          "name": "Chicken Quesadillas",
+          "description": "Flour tortillas filled with shredded chicken and melted cheddar, served with salsa.",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Quinoa Stuffed Bell Peppers",
+          "name": "Slow Cooker Beef Stew",
+          "description": "Tender beef chunks simmered with root vegetables in a rich savory broth.",
           "status": "pending"
         }
       ]
@@ -85,37 +99,44 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "BBQ Chicken Skewers with Grilled Corn",
+          "name": "Turkey Chili",
+          "description": "Hearty ground turkey chili with kidney beans, diced tomatoes, and mild spices.",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Creamy Beef Stroganoff over Egg Noodles",
+          "name": "Nut-Free Pesto Pasta",
+          "description": "Fusilli pasta tossed in a homemade basil and sunflower seed pesto with grilled chicken.",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Eggplant Parmesan with Marinara",
+          "name": "Oven-Baked Pork Chops",
+          "description": "Seasoned pork chops baked with a side of mashed potatoes and peas.",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Roasted Pork Tenderloin with Apples",
+          "name": "Chickpea Curry",
+          "description": "A flavorful and budget-friendly vegetarian curry served with steamed jasmine rice.",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Sizzling Chicken Fajitas with Bell Peppers",
+          "name": "Tuna Salad Sandwiches",
+          "description": "Flaked tuna mixed with mayo and celery on toasted whole wheat bread.",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Shepherd's Pie with Mashed Potato Topping",
+          "name": "BBQ Chicken Flatbread",
+          "description": "Flatbread topped with BBQ sauce, grilled chicken, red onion, and cilantro.",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Roasted Butternut Squash and Sage Soup",
+          "name": "Pot Roast",
+          "description": "Budget-friendly beef roast slow-cooked with carrots, onions, and garlic.",
           "status": "pending"
         }
       ]
@@ -125,37 +146,44 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Lemon and Thyme Roasted Whole Chicken",
+          "name": "Eggplant Parmesan",
+          "description": "Slices of breaded eggplant layered with marinara and mozzarella cheese.",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Spaghetti Bolognese with Lean Ground Beef",
+          "name": "Ground Beef Sliders",
+          "description": "Mini beef burgers served on buns with a side of homemade sweet potato fries.",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Chickpea and Vegetable Coconut Curry",
+          "name": "Shrimp Scampi with Linguine",
+          "description": "Shrimp sautéed in a garlic, lemon, and butter sauce served over linguine.",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Sirloin Steak Salad with Blue Cheese",
+          "name": "Spinach and Feta Stuffed Chicken",
+          "description": "Chicken breasts filled with spinach and feta cheese, then baked until golden.",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Pulled Pork Sliders with Coleslaw",
+          "name": "Vegetable Fried Rice",
+          "description": "Rice stir-fried with peas, carrots, eggs, and soy sauce (no peanut oil used).",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Honey Glazed Ham with Roasted Root Vegetables",
+          "name": "Beef Burrito Bowls",
+          "description": "Seasoned ground beef served over rice with black beans, corn, and shredded lettuce.",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Chicken Pot Pie with Flaky Crust",
+          "name": "Herb-Crusted Baked Salmon",
+          "description": "Salmon fillets topped with a parsley and garlic crust served with roasted zucchini.",
           "status": "pending"
         }
       ]

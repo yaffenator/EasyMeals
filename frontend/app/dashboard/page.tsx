@@ -18,47 +18,27 @@ import Link from "next/link";
 import {
   Clock,
   DollarSign,
-  Users,
-  ChefHat,
   Calendar,
   Soup,
   RefreshCw,
-  Loader2,
+  ChefHat,
 } from "lucide-react";
-import {
-  saveMealPlan,
-  loadMealPlan,
-  clearMealPlan,
-  FullMealPlan,
-} from "../utils/MealPlanGenerator";
 import { useAuth } from "../context/auth";
 import { useRouter } from "next/navigation";
-import { auth, db, loadMealPlanFromFirestore } from "../firebase";
+import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { useMealPlan } from "../context/MealPlanContext"; // Import the context
 
 export default function Dashboard() {
-  const [mealPlan, setMealPlan] = useState<FullMealPlan | null>(null);
+  // 1. Replace local state with Global Context
+  const { mealPlan, setMealPlan } = useMealPlan();
+  
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
 
   const router = useRouter();
   const { currentUser } = useAuth();
-
-  // Load existing plan on mount
-  useEffect(() => {
-    const fetchMealPlan = async () => {
-      const uid = currentUser?.uid || auth.currentUser?.uid;
-      if (uid) {
-        const plan = await loadMealPlanFromFirestore(uid);
-        if (plan) {
-          setMealPlan(plan);
-        }
-      }
-    };
-
-    fetchMealPlan();
-  }, [currentUser]);
 
   // Auth check
   useEffect(() => {
@@ -87,8 +67,11 @@ export default function Dashboard() {
     checkQuestionnaireStatus();
   }, [currentUser, mealPlan]);
 
+  // 2. The hydration logic (useEffect) has been REMOVED. 
+  // It now lives in MealPlanContext.tsx to allow background processing.
+
   const handleCreateMealPlan = (fullMealPlan: any) => {
-    setMealPlan(fullMealPlan); 
+    setMealPlan(fullMealPlan); // Updates the Global Context
     setQuestionnaireCompleted(true);
     setShowWizard(false);
   };
@@ -131,6 +114,7 @@ export default function Dashboard() {
 
   // Calculate current view data
   const currentWeek = mealPlan.weeks[selectedWeek - 1] || { meals: [] };
+  
   const totalWeeklyCost = currentWeek.meals?.reduce(
     (sum, meal) => sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
     0
@@ -187,7 +171,6 @@ export default function Dashboard() {
               <CardTitle className="text-2xl">{Math.round(avgPrepTime)} min</CardTitle>
             </CardHeader>
           </Card>
-          {/* Add more stat cards as needed */}
         </div>
 
         {/* Meal Plan Grid */}

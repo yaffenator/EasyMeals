@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/dashboard-heading';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -8,62 +8,38 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import ImageWithFallback from '../../components/Figma/imageWithFallback';
 import { Clock, DollarSign, Users, ChefHat, ArrowLeft, Flame, Loader2, Lightbulb } from 'lucide-react';
-import { loadMealPlanFromFirestore, auth } from '../../firebase';
-import { useAuth } from '../../context/auth';
+import { useMealPlan } from '../../context/MealPlanContext'; // Import the context
 import { generateRecipeDetails } from '../../utils/recipeDetails';
 import Link from 'next/link';
-
-interface Meal {
-  id: string;
-  status?: string;
-  [key: string]: unknown;
-}
-
-interface Week {
-  meals: Meal[];
-}
-
-interface MealPlan {
-  weeks: Week[];
-}
 
 export default function Recipe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { currentUser } = useAuth();
-  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // 1. Grab the global mealPlan and the loading status from context
+  const { mealPlan } = useMealPlan();
 
-  useEffect(() => {
-    const fetchMealPlan = async () => {
-      const uid = currentUser?.uid || auth.currentUser?.uid;
-      if (uid) {
-        const plan = await loadMealPlanFromFirestore(uid);
-        if (plan) {
-          setMealPlan(plan as MealPlan);
-        }
-      }
-      setLoading(false);
-    };
-
-    fetchMealPlan();
-  }, [currentUser]);
-
-  let recipe: Meal | null = null;
+  // 2. Find the recipe directly from the global state
+  // This is reactive: if status changes from 'pending' to 'completed' in the background, 
+  // this variable updates and the UI re-renders automatically.
+  let recipe = null;
   if (mealPlan) {
     for (const week of mealPlan.weeks) {
-      recipe = week.meals.find((meal) => meal.id === id) || null;
+      recipe = week.meals.find((meal: any) => meal.id === id) || null;
       if (recipe) break;
     }
   }
 
+  // 3. Handle navigation if the recipe truly doesn't exist
   useEffect(() => {
-    if (!loading && (!mealPlan || !recipe)) {
+    // Only redirect if we have a mealPlan loaded and still can't find the ID
+    if (mealPlan && !recipe) {
       router.push('/dashboard');
     }
-  }, [loading, mealPlan, recipe, router]);
+  }, [mealPlan, recipe, router]);
 
-  if (loading || !recipe) {
+  // 4. Loading state for initial data fetch
+  if (!mealPlan) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -71,17 +47,25 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     );
   }
 
-  if (recipe.status === 'pending') {
+  // 5. "Still Generating" state
+  // Because we use the global context, as soon as the background worker 
+  // finishes this meal, this 'if' will become false and the recipe will pop in!
+  if (!recipe || recipe.status === 'pending') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
         <Header />
         <main className="container mx-auto px-4 py-16 text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-primary">Recipe Still Generating...</h1>
-          <p className="text-muted-foreground mt-2">Please wait a moment while the chef prepares the details.</p>
-          <Link href="/dashboard">
-            <Button variant="outline" className="mt-6">Back to Dashboard</Button>
-          </Link>
+          <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm border">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-primary">Chef is Writing the Recipe...</h1>
+            <p className="text-muted-foreground mt-2">
+              We are calculating the exact ingredients and costs for <b>{recipe?.name || 'this meal'}</b>. 
+              This page will update automatically.
+            </p>
+            <Link href="/dashboard">
+              <Button variant="outline" className="mt-6">Back to Dashboard</Button>
+            </Link>
+          </div>
         </main>
       </div>
     );
@@ -105,13 +89,13 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Badge className="bg-primary text-primary-foreground">{detailedRecipe.day}</Badge>
-                <Badge variant="outline">{detailedRecipe.difficulty}</Badge>
+                <Badge variant="outline">{detailedRecipe.difficulty || 'Easy'}</Badge>
               </div>
-              <h1 className="text-3xl md:text-4xl text-primary-black mb-4">{detailedRecipe.name}</h1>
+              <h1 className="text-3xl md:text-4xl text-primary mb-4">{detailedRecipe.name}</h1>
               <p className="text-lg text-muted-foreground">{detailedRecipe.description}</p>
             </div>
 
-            <div className="relative w-full h-[400px] rounded-lg overflow-hidden">
+            <div className="relative w-full h-[400px] rounded-lg overflow-hidden border bg-muted">
               <ImageWithFallback
                 src={detailedRecipe.image}
                 alt={detailedRecipe.name}
@@ -122,26 +106,25 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Clock className="w-6 h-6 text-primary mb-2" />
-                <div className="text-2xl mb-1">{detailedRecipe.prepTime}</div>
+                <div className="text-xl font-bold mb-1">{detailedRecipe.prepTime}</div>
                 <div className="text-sm text-muted-foreground">Prep Time</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Users className="w-6 h-6 text-primary mb-2" />
-                <div className="text-2xl mb-1">{detailedRecipe.servings}</div>
+                <div className="text-xl font-bold mb-1">{detailedRecipe.servings}</div>
                 <div className="text-sm text-muted-foreground">Servings</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <DollarSign className="w-6 h-6 text-primary mb-2" />
-                <div className="text-2xl mb-1">{detailedRecipe.totalCost}</div>
-                <div className="text-xs text-muted-foreground mb-1">Total Cost</div>
+                <div className="text-xl font-bold mb-1">{detailedRecipe.totalCost}</div>
                 <div className="text-xs text-muted-foreground">{detailedRecipe.costPerServing}/serving</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Flame className="w-6 h-6 text-primary mb-2" />
-                <div className="text-2xl mb-1">{detailedRecipe.calories}</div>
+                <div className="text-xl font-bold mb-1">{detailedRecipe.calories}</div>
                 <div className="text-sm text-muted-foreground">Calories</div>
               </CardContent></Card>
             </div>
@@ -155,7 +138,7 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
-                    {detailedRecipe.ingredients.map((ing, i) => (
+                    {detailedRecipe.ingredients?.map((ing: string, i: number) => (
                       <li key={i} className="flex items-start gap-2">
                         <span className="text-primary mt-1.5">-</span><span>{ing}</span>
                       </li>
@@ -168,9 +151,9 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                 <CardHeader><CardTitle className="text-primary">Instructions</CardTitle></CardHeader>
                 <CardContent>
                   <ol className="space-y-4">
-                    {detailedRecipe.instructions.map((ins, i) => (
+                    {detailedRecipe.instructions?.map((ins: string, i: number) => (
                       <li key={i} className="flex gap-4">
-                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/90 text-primary-foreground flex items-center justify-center">{i + 1}</span>
+                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">{i + 1}</span>
                         <span className="pt-1">{ins}</span>
                       </li>
                     ))}
@@ -188,12 +171,12 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center pb-2 border-b">
-                  <span className="text-sm">Calories</span><span className="text-lg">{detailedRecipe.calories}</span>
+                  <span className="text-sm">Calories</span><span className="text-lg font-bold">{detailedRecipe.calories}</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm"><span>Protein</span><span>{detailedRecipe.protein}</span></div>
-                  <div className="flex justify-between text-sm"><span>Carbs</span><span>{detailedRecipe.carbs}</span></div>
-                  <div className="flex justify-between text-sm"><span>Fat</span><span>{detailedRecipe.fat}</span></div>
+                  <div className="flex justify-between text-sm"><span>Protein</span><span className="font-medium">{detailedRecipe.protein}</span></div>
+                  <div className="flex justify-between text-sm"><span>Carbs</span><span className="font-medium">{detailedRecipe.carbs}</span></div>
+                  <div className="flex justify-between text-sm"><span>Fat</span><span className="font-medium">{detailedRecipe.fat}</span></div>
                 </div>
               </CardContent>
             </Card>
@@ -205,9 +188,9 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {detailedRecipe.tips.length ? (
+                {detailedRecipe.tips?.length ? (
                   <ul className="space-y-2">
-                    {detailedRecipe.tips.map((tip, i) => (
+                    {detailedRecipe.tips.map((tip: string, i: number) => (
                       <li key={i} className="text-sm text-muted-foreground">{i + 1}. {tip}</li>
                     ))}
                   </ul>

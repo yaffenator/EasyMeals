@@ -82,44 +82,81 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
     try {
       const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error("No user ID found");
 
-      if (uid) {
-        await updateUserPreferences(uid, finalData);
-      }
+      // 1. Update user profile in Firestore
+      await updateUserPreferences(uid, finalData);
 
-      const response = await fetch("/api/generate-recipe", {
+      // 2. Call the new skeleton route (save-preferences)
+      const response = await fetch("/api/save-preferences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalData),
       });
 
       if (!response.ok) {
-        throw new Error("Generation failed");
+        throw new Error("Skeleton generation failed");
       }
 
-      const generatedResponse = await response.json();
-      const generatedMealPlan = generatedResponse?.mealPlan;
+      const responseData = await response.json();
 
-      if (!generatedMealPlan?.weeks || !uid) {
-        throw new Error("Meal plan response did not include weeks");
-      }
+      // 3. Transform the skeleton into the FullMealPlan format
+      // We add unique IDs and ensure status is "pending"
+      // Inside handleNext in MealPlanWizard.tsx
+      const generatedMealPlan = {
+        preferences: finalData,
+        weeks: responseData.weeks.map((week: any) => ({
+          ...week,
+          meals: week.meals.map((meal: any) => ({
+            // 1. Keep the AI-generated name and day
+            name: meal.name,
+            day: meal.day,
+            
+            // 2. Metadata
+            id: crypto.randomUUID(),
+            status: "pending", // Dashboard uses this for the loader
+            
+            // 3. Placeholder values (Prevents Firebase "undefined" errors)
+            description: meal.description || "",
+            calories: 0,
+            carbs: "0g",
+            fat: "0g",
+            protein: "0g",
+            prepTime: "0 min",
+            cookTime: 0,
+            servings: 0,
+            totalCost: "$0.00",
+            costPerServing: "$0.00",
+            instructions: [],
+            ingredients: [],
+            ingredientItems: [],
+            tags: [],
+            tips: [],
+            source: "generated",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }))
+        })),
+        createdAt: new Date().toISOString(),
+      };
 
+      // 4. Save the skeleton to Firestore
       await uploadMealPlanToUser(uid, generatedMealPlan);
 
-      // Fire-and-forget: trigger backend image generation for meals without images.
+      // 5. Fire-and-forget: trigger backend image generation (optional)
       fetch("/api/generate-meal-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid }),
-      }).catch((err) => {
-        console.error("Failed to trigger meal image generation:", err);
-      });
+      }).catch((err) => console.error("Image trigger failed:", err));
 
-      const storedMealPlan = await loadMealPlanFromFirestore(uid);
-      onComplete(storedMealPlan || generatedMealPlan);
+      // 6. Pass the skeleton to the parent (Dashboard)
+      // The Dashboard's useEffect will now see the "pending" meals and start hydrating
+      onComplete(generatedMealPlan);
+      
     } catch (error) {
-      console.error("Error:", error);
-      alert("Something went wrong. Check your console!");
+      console.error("Error during setup:", error);
+      alert("Something went wrong. Please check your connection and try again.");
     } finally {
       setIsSaving(false);
     }

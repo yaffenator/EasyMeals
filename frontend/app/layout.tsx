@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "./context/auth";
+import { MealPlanProvider } from "./context/MealPlanContext"; // Import here
 
 export const metadata: Metadata = {
   title: "EasyMeals",
@@ -16,7 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <MealPlanProvider> {/* Wrap children here */}
+            {children}
+          </MealPlanProvider>
+        </AuthProvider>
       </body>
     </html>
   );

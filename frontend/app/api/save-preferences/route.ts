@@ -60,16 +60,20 @@ export async function POST(request: Request) {
     `;
 */
     const prompt = `
-      Create a 4-week list of meal NAMES only.
-      use these preferneces to guide the meals, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
-      example format for returnd JSON: 
+      Create a 4-week list of meal NAMES and short descriptions only.
+      be sure to stick to these preferences strictly: ${JSON.stringify(preferences)}
+      Return JSON:
       {
         "weeks": [
           {
             "weekNumber": 1,
             "meals": [
-              { "day": "Monday", "name": "Honey Garlic Salmon", "status": "pending" },
-              ...
+              { 
+                "day": "Monday", 
+                "name": "Honey Garlic Salmon", 
+                "description": "Succulent salmon glazed in a sweet and savory garlic sauce.",
+                "status": "pending" 
+              }
             ]
           }
         ]
