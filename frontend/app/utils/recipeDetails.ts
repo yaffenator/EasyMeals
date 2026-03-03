@@ -36,6 +36,7 @@ type RecipeLike = Partial<Recipe> & {
   ingredients?: string[];
   instructions?: string[];
   tips?: string[];
+  cookTime?: number;
 };
 
 function toMoneyString(value: string | number | undefined): string {

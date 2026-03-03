@@ -32,7 +32,7 @@ import { useMealPlan } from "../context/MealPlanContext"; // Import the context
 export default function Dashboard() {
   // 1. Replace local state with Global Context
   const { mealPlan, setMealPlan } = useMealPlan();
-  
+
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
@@ -50,14 +50,16 @@ export default function Dashboard() {
   // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
-      const uid = currentUser?.uid || auth.currentUser?.uid;
+      const uid = (currentUser as any)?.uid || auth.currentUser?.uid;
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
           const userSnap = await getDoc(userRef);
           if (userSnap.exists()) {
             const userData = userSnap.data();
-            setQuestionnaireCompleted(!!userData.mealPlanProfile?.questionnaireCompleted);
+            setQuestionnaireCompleted(
+              !!userData.mealPlanProfile?.questionnaireCompleted,
+            );
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -67,7 +69,7 @@ export default function Dashboard() {
     checkQuestionnaireStatus();
   }, [currentUser, mealPlan]);
 
-  // 2. The hydration logic (useEffect) has been REMOVED. 
+  // 2. The hydration logic (useEffect) has been REMOVED.
   // It now lives in MealPlanContext.tsx to allow background processing.
 
   const handleCreateMealPlan = (fullMealPlan: any) => {
@@ -90,7 +92,7 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
-              Welcome, {currentUser?.displayName || "Chef"}!
+              Welcome, {(currentUser as any)?.displayName || "Chef"}!
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
               It looks like you haven't generated your personalized plan yet.
@@ -106,7 +108,10 @@ export default function Dashboard() {
           </div>
         </main>
         {showWizard && (
-          <MealPlanWizard onComplete={handleCreateMealPlan} onCancel={() => setShowWizard(false)} />
+          <MealPlanWizard
+            onComplete={handleCreateMealPlan}
+            onCancel={() => setShowWizard(false)}
+          />
         )}
       </div>
     );
@@ -114,14 +119,19 @@ export default function Dashboard() {
 
   // Calculate current view data
   const currentWeek = mealPlan.weeks[selectedWeek - 1] || { meals: [] };
-  
-  const totalWeeklyCost = currentWeek.meals?.reduce(
-    (sum, meal) => sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
-    0
-  ) || 0;
-  
+
+  const totalWeeklyCost =
+    currentWeek.meals?.reduce(
+      (sum: number, meal: any) =>
+        sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
+      0,
+    ) || 0;
+
   const avgPrepTime = currentWeek.meals?.length
-    ? currentWeek.meals.reduce((sum, meal) => sum + parseInt(String(meal.prepTime || 0)), 0) / currentWeek.meals.length
+    ? currentWeek.meals.reduce(
+        (sum: number, meal: any) => sum + parseInt(String(meal.prepTime || 0)),
+        0,
+      ) / currentWeek.meals.length
     : 0;
 
   return (
@@ -130,10 +140,14 @@ export default function Dashboard() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
-            Hello, {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
+            Hello,{" "}
+            {(currentUser as any)?.displayName ||
+              (currentUser as any)?.email?.split("@")[0]}
+            !
           </h1>
           <p className="text-muted-foreground">
-            Recipes optimized for your ${mealPlan?.preferences?.monthlyBudget || "0"}/month budget
+            Recipes optimized for your $
+            {mealPlan?.preferences?.monthlyBudget || "0"}/month budget
           </p>
         </div>
 
@@ -144,10 +158,12 @@ export default function Dashboard() {
             <h2 className="text-xl">Select Week</h2>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {mealPlan.weeks.map((week) => (
+            {mealPlan.weeks.map((week: any) => (
               <Button
                 key={week.weekNumber}
-                variant={selectedWeek === week.weekNumber ? "default" : "outline"}
+                variant={
+                  selectedWeek === week.weekNumber ? "default" : "outline"
+                }
                 onClick={() => setSelectedWeek(week.weekNumber)}
                 className={selectedWeek === week.weekNumber ? "bg-primary" : ""}
               >
@@ -162,13 +178,17 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Weekly Cost</CardDescription>
-              <CardTitle className="text-2xl">${totalWeeklyCost.toFixed(2)}</CardTitle>
+              <CardTitle className="text-2xl">
+                ${totalWeeklyCost.toFixed(2)}
+              </CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardDescription>Avg. Prep Time</CardDescription>
-              <CardTitle className="text-2xl">{Math.round(avgPrepTime)} min</CardTitle>
+              <CardTitle className="text-2xl">
+                {Math.round(avgPrepTime)} min
+              </CardTitle>
             </CardHeader>
           </Card>
         </div>
@@ -204,13 +224,21 @@ export default function Dashboard() {
                     </div>
                     <CardHeader className="pb-0 pt-4">
                       <CardTitle className="text-xl">{meal.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">{meal.description}</CardDescription>
+                      <CardDescription className="line-clamp-2">
+                        {meal.description}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-4">
                       <div className="flex justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1"><Clock className="w-4 h-4" /> {meal.prepTime}</div>
-                        <div className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> {meal.totalCost}</div>
-                        <div className="flex items-center gap-1"><Soup className="w-4 h-4" /> {meal.calories} cal</div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" /> {meal.prepTime}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" /> {meal.totalCost}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Soup className="w-4 h-4" /> {meal.calories} cal
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -222,8 +250,12 @@ export default function Dashboard() {
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <Button size="lg" onClick={handleGenerateNew}>Generate New Plan</Button>
-          <Button size="lg" variant="outline">Download Shopping List</Button>
+          <Button size="lg" onClick={handleGenerateNew}>
+            Generate New Plan
+          </Button>
+          <Button size="lg" variant="outline">
+            Download Shopping List
+          </Button>
         </div>
       </main>
       <Footer />
