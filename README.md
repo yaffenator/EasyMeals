@@ -10,6 +10,8 @@
 * **Use Case #2:** The registered user will narrow down their health requirements & fitness goals through a variety of health-related inquiries.
 * **Use Case #3:**  Upon completing the health requirements & fitness goals questionnaire, the registered user will receive an itemized list of groceries and curated recipes tailored specifically to their financial constraints and physical objectives.
 
+**Check out the project here:** https://easy-meals-nine.vercel.app/
+
 ---
 
 ##  Team Information
