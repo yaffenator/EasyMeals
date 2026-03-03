@@ -33,7 +33,7 @@ import {
 } from "../utils/MealPlanGenerator";
 import { useAuth } from "../context/auth";
 import { useRouter } from "next/navigation";
-import { auth, db } from "../firebase";
+import { auth, db, loadMealPlanFromFirestore } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function Dashboard() {
@@ -47,11 +47,18 @@ export default function Dashboard() {
 
   // Load existing plan on mount
   useEffect(() => {
-    const existingPlan = loadMealPlan();
-    if (existingPlan) {
-      setMealPlan(existingPlan);
-    }
-  }, []);
+    const fetchMealPlan = async () => {
+      const uid = currentUser?.uid || auth.currentUser?.uid;
+      if (uid) {
+        const plan = await loadMealPlanFromFirestore(uid);
+        if (plan) {
+          setMealPlan(plan);
+        }
+      }
+    };
+
+    fetchMealPlan();
+  }, [currentUser]);
 
   // Auth check
   useEffect(() => {
@@ -80,64 +87,13 @@ export default function Dashboard() {
     checkQuestionnaireStatus();
   }, [currentUser, mealPlan]);
 
-  // PROGRESSIVE GENERATION LOGIC: 
-  // Watches for "pending" meals and fills them in one-by-one
-  useEffect(() => {
-    const fillPendingMeals = async () => {
-      if (!mealPlan || !mealPlan.weeks) return;
-
-      // Find the first meal that is still "pending"
-      const allMeals = mealPlan.weeks.flatMap(w => w.meals);
-      const pendingMeal = allMeals.find((m: any) => m.status === "pending");
-
-      if (pendingMeal) {
-        try {
-          const res = await fetch("/api/generate-recipe", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mealName: pendingMeal.name,
-              preferences: mealPlan.preferences
-            }),
-          });
-
-          if (!res.ok) throw new Error("Individual generation failed");
-          
-          const responseData = await res.json();
-          // Assuming generate-recipe returns { mealPlan: { ...recipeData } }
-          const completedRecipe = responseData.mealPlan;
-
-          // Update local state by swapping the pending meal for the completed one
-          const updatedWeeks = mealPlan.weeks.map(week => ({
-            ...week,
-            meals: week.meals.map((m: any) => 
-              m.id === pendingMeal.id 
-                ? { ...completedRecipe, id: m.id, day: m.day, status: "completed" } 
-                : m
-            )
-          }));
-
-          const newPlan = { ...mealPlan, weeks: updatedWeeks };
-          setMealPlan(newPlan);
-          saveMealPlan(newPlan);
-        } catch (e) {
-          console.error("Failed to generate", pendingMeal.name, e);
-        }
-      }
-    };
-
-    fillPendingMeals();
-  }, [mealPlan]);
-
   const handleCreateMealPlan = (fullMealPlan: any) => {
     setMealPlan(fullMealPlan); 
-    saveMealPlan(fullMealPlan);
     setQuestionnaireCompleted(true);
     setShowWizard(false);
   };
 
   const handleGenerateNew = () => {
-    clearMealPlan();
     setMealPlan(null);
     setShowWizard(true);
   };

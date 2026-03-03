@@ -90,7 +90,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
       }
 
       try {
-        const response = await fetch("/api/save-preferences", {
+        const response = await fetch("/api/generate-recipe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(finalData), // Now the computer knows what finalData is

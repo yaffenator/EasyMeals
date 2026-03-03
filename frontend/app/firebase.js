@@ -8,7 +8,7 @@ import {
   GithubAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp,collection, addDoc, arrayUnion } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp,collection, addDoc, arrayUnion, getDocs } from "firebase/firestore";
 import { UserPlus } from "lucide-react";
 
 // firebase configuration object that uses environment variables to store sensitive information
@@ -140,8 +140,7 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
   if (!uid || !mealPlan) return;
 
   try {
-    const userRef = doc(db, "users", uid);
-    const uploadedRecipeRefs = [];
+    const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
 
     // Loop through the meals Gemini generated
     for (const recipeData of mealPlan) {
@@ -164,20 +163,63 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
         updatedAt: serverTimestamp()
       };
 
-      // 1. Save to the global 'recipes' collection
-      const recipeRef = await addDoc(collection(db, "recipes"), firestoreDoc);
-      uploadedRecipeRefs.push(recipeRef);
+      // 1. Save to the user's 'mealPlan' subcollection
+      await addDoc(mealPlanCollectionRef, firestoreDoc);
     }
 
-    // 2. Link these new recipes to the user's profile array
-    await updateDoc(userRef, {
-      "mealPlanProfile.meals": arrayUnion(...uploadedRecipeRefs),
-      "mealPlanProfile.updatedAt": serverTimestamp()
-    });
-
-    console.log("Gemini meal plan synced to Firestore!");
+    console.log("Gemini meal plan synced to user's mealPlan subcollection!");
   } catch (error) {
     console.error("Error syncing Gemini plan:", error);
     throw error;
+  }
+};
+
+export const loadMealPlanFromFirestore = async (uid) => {
+  if (!uid) return null;
+
+  try {
+    const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
+    const querySnapshot = await getDocs(mealPlanCollectionRef);
+    
+    if (querySnapshot.empty) {
+      return null;
+    }
+
+    const meals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // For now, we'll just use the first meal and create a placeholder structure.
+    const firstMeal = meals[0];
+
+    const placeholderMeal = (day, name) => ({
+      id: `${name.toLowerCase().replace(/\s/g, '_')}_${day.toLowerCase()}`,
+      day: day,
+      name: name,
+      status: "pending",
+    });
+
+    const fullMealPlan = {
+      preferences: {}, // We'll need to fetch this separately if needed
+      weeks: [
+        {
+          weekNumber: 1,
+          meals: [
+            { ...firstMeal, day: "Monday", status: "completed" },
+            placeholderMeal("Tuesday", "Chicken Stir-Fry"),
+            placeholderMeal("Wednesday", "Spaghetti Bolognese"),
+            placeholderMeal("Thursday", "Lentil Soup"),
+            placeholderMeal("Friday", "Fish Tacos"),
+            placeholderMeal("Saturday", "Beef Burgers"),
+            placeholderMeal("Sunday", "Roast Chicken"),
+          ]
+        },
+        // Add more placeholder weeks if needed
+      ]
+    };
+
+    return fullMealPlan;
+
+  } catch (error) {
+    console.error("Error loading meal plan from Firestore:", error);
+    return null;
   }
 };

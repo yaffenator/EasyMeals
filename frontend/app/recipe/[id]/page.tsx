@@ -9,7 +9,8 @@ import { Button } from '../../components/ui/button';
 import { Separator } from '../../components/ui/separator';
 import ImageWithFallback from '../../components/Figma/imageWithFallback';
 import { Clock, DollarSign, Users, ChefHat, ArrowLeft, Flame, Heart, Loader2 } from 'lucide-react';
-import { loadMealPlan } from '../../utils/MealPlanGenerator';
+import { loadMealPlanFromFirestore, auth, db } from '../../firebase';
+import { useAuth } from '../../context/auth';
 import { generateRecipeDetails } from '../../utils/recipeDetails';
 import Link from 'next/link';
 
@@ -19,17 +20,25 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
 
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
+  const { currentUser } = useAuth();
   const [mealPlan, setMealPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Load meal plan on mount
   useEffect(() => {
-    const savedPlan = loadMealPlan();
-    if (savedPlan) {
-      setMealPlan(savedPlan);
-    }
-    setLoading(false);
-  }, []);
+    const fetchMealPlan = async () => {
+      const uid = currentUser?.uid || auth.currentUser?.uid;
+      if (uid) {
+        const plan = await loadMealPlanFromFirestore(uid);
+        if (plan) {
+          setMealPlan(plan);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchMealPlan();
+  }, [currentUser]);
 
   // Find the recipe across all weeks
   let recipe: any = null;

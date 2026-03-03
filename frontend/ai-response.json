@@ -5,37 +5,37 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Lemon Herb Roasted Chicken with Brown Rice",
+          "name": "Grilled Lemon Herb Chicken with Quinoa",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Beef and Broccoli Stir-fry",
+          "name": "Beef Tacos with Fresh Salsa and Avocado",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Coconut Chickpea Curry with Spinach",
+          "name": "Creamy Basil Pesto Pasta with Sun-Dried Tomatoes",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Baked Cod with Roasted Sweet Potatoes",
+          "name": "Chicken Stir-fry with Broccoli and Cashews",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Spaghetti Aglio e Olio with Grilled Shrimp",
+          "name": "Homemade Margherita Pizza",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Turkey Tacos with Corn Tortillas and Avocado",
+          "name": "Slow-Roasted Beef Pot Roast with Carrots",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Slow Cooker Beef Stew with Potatoes and Carrots",
+          "name": "Vegetable Lasagna with Ricotta and Spinach",
           "status": "pending"
         }
       ]
@@ -45,37 +45,37 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Honey Ginger Glazed Salmon",
+          "name": "Turkey and Black Bean Chili",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Black Bean and Corn Stuffed Bell Peppers",
+          "name": "Pan-Seared Steak with Garlic Butter Mushrooms",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Chicken Thighs with Garlic and Rosemary",
+          "name": "Wild Mushroom Risotto with Parmesan",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Red Lentil Soup with Crusty Bread",
+          "name": "Chicken Parmesan with Zucchini Noodles",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Pan-Seared Tilapia with Quinoa Salad",
+          "name": "Classic Beef Burgers with Sweet Potato Fries",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Sausage and Vegetable Sheet Pan Bake",
+          "name": "Herb-Crusted Lamb Chops with Asparagus",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Roasted Pork Tenderloin with Asparagus",
+          "name": "Quinoa Stuffed Bell Peppers",
           "status": "pending"
         }
       ]
@@ -85,37 +85,37 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Teriyaki Tofu with Steamed Bok Choy",
+          "name": "BBQ Chicken Skewers with Grilled Corn",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Ground Turkey and Green Bean Stir-fry",
+          "name": "Creamy Beef Stroganoff over Egg Noodles",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Pasta with Dairy-Free Basil Pesto and Walnuts",
+          "name": "Eggplant Parmesan with Marinara",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Grilled Chicken Greek Salad with Olive Oil Dressing",
+          "name": "Roasted Pork Tenderloin with Apples",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Tuna Steaks with Cucumber Tomato Salad",
+          "name": "Sizzling Chicken Fajitas with Bell Peppers",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Chili Con Carne with Diced Onions",
+          "name": "Shepherd's Pie with Mashed Potato Topping",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Lemon Garlic Whole Roasted Chicken",
+          "name": "Roasted Butternut Squash and Sage Soup",
           "status": "pending"
         }
       ]
@@ -125,37 +125,37 @@
       "meals": [
         {
           "day": "Monday",
-          "name": "Eggplant Stir-fry with Cashews and Rice",
+          "name": "Lemon and Thyme Roasted Whole Chicken",
           "status": "pending"
         },
         {
           "day": "Tuesday",
-          "name": "Baked Chicken Thighs with Zucchini Noodles",
+          "name": "Spaghetti Bolognese with Lean Ground Beef",
           "status": "pending"
         },
         {
           "day": "Wednesday",
-          "name": "Quinoa Bowl with Black Beans and Roasted Corn",
+          "name": "Chickpea and Vegetable Coconut Curry",
           "status": "pending"
         },
         {
           "day": "Thursday",
-          "name": "Beef and Cabbage Skillet",
+          "name": "Sirloin Steak Salad with Blue Cheese",
           "status": "pending"
         },
         {
           "day": "Friday",
-          "name": "Salmon Cakes with Mixed Greens",
+          "name": "Pulled Pork Sliders with Coleslaw",
           "status": "pending"
         },
         {
           "day": "Saturday",
-          "name": "Pulled Pork Carnitas with Salsa Verde",
+          "name": "Honey Glazed Ham with Roasted Root Vegetables",
           "status": "pending"
         },
         {
           "day": "Sunday",
-          "name": "Mediterranean Roasted White Fish with Olives",
+          "name": "Chicken Pot Pie with Flaky Crust",
           "status": "pending"
         }
       ]
