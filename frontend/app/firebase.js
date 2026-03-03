@@ -1,17 +1,26 @@
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
   GithubAuthProvider,
-  signInWithPopup
+  signInWithPopup,
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp,collection, addDoc, arrayUnion, getDocs } from "firebase/firestore";
-import { UserPlus } from "lucide-react";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+} from "firebase/firestore";
 
-// firebase configuration object that uses environment variables to store sensitive information
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_apiKey,
   authDomain: process.env.NEXT_PUBLIC_authDomain,
@@ -22,16 +31,14 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_measurementId,
 };
 
-// initialize firebase app, auth, and firestore (database connection)
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// create google and github auth providers
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-// email password registration function that takes in an email, password, and name and returns the user if the registration is successful, otherwise throws an error
 export const registerUser = async (email, password, name) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -41,9 +48,8 @@ export const registerUser = async (email, password, name) => {
   } catch (error) {
     throw error;
   }
-}
+};
 
-// email password login function that takes in an email and password and returns the user if the login is successful, otherwise throws an error
 export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -51,9 +57,8 @@ export const loginUser = async (email, password) => {
   } catch (error) {
     throw error;
   }
-}
+};
 
-// google sign in function that uses the GoogleAuthProvider to sign in with a popup and returns the user if the login is successful, otherwise throws an error
 export const loginWithGoogle = async () => {
   try {
     const userCredential = await signInWithPopup(auth, googleProvider);
@@ -62,9 +67,8 @@ export const loginWithGoogle = async () => {
   } catch (error) {
     throw error;
   }
-}
+};
 
-// github sign in function that uses the GithubAuthProvider to sign in with a popup and returns the user if the login is successful, otherwise throws an error
 export const loginWithGithub = async () => {
   try {
     const userCredential = await signInWithPopup(auth, githubProvider);
@@ -73,34 +77,31 @@ export const loginWithGithub = async () => {
   } catch (error) {
     throw error;
   }
-}
+};
 
-// logout function that signs the user out and returns a promise that resolves if the logout is successful, otherwise throws an error
 export const logoutUser = async () => {
   try {
     await auth.signOut();
   } catch (error) {
     throw error;
   }
-}
+};
 
-// Function to save user data to Firestore. It checks if the user already exists in the 'users' collection, and if not, it creates a new document with the user's information. It also accepts additional data that can be merged into the user document.
 export const saveUserToDatabase = async (user, additionalData = {}) => {
   if (!user) return;
 
-  // Create a reference to the 'users' collection, using the user's UID as the document ID
   const userRef = doc(db, "users", user.uid);
   const userSnap = await getDoc(userRef);
 
-  // If the user doesn't exist in the database yet, create them!
   if (!userSnap.exists()) {
     try {
       await setDoc(userRef, {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName || additionalData.displayName || user.email.split("@")[0] || "Chef", // Fallback name
-        createdAt: serverTimestamp(), // Firebase's built-in timestamp
-        ...additionalData // Any extra data you want to pass in
+        displayName:
+          user.displayName || additionalData.displayName || user.email.split("@")[0] || "Chef",
+        createdAt: serverTimestamp(),
+        ...additionalData,
       });
     } catch (error) {
       console.error("Error creating user document", error);
@@ -108,26 +109,23 @@ export const saveUserToDatabase = async (user, additionalData = {}) => {
   }
 };
 
-// Function to update user preferences in Firestore. It takes the user's UID and the new preferences data, and updates the corresponding document in the 'users' collection.
 export const updateUserPreferences = async (uid, preferencesData) => {
   if (!uid) return;
-  
+
   try {
     const userRef = doc(db, "users", uid);
     await updateDoc(userRef, {
       mealPlanProfile: {
-        questionnaireCompleted: preferencesData.questionnaireCompleted || true, 
+        questionnaireCompleted: preferencesData.questionnaireCompleted || true,
         allergies: preferencesData.allergies || [],
         excludedCuisines: preferencesData.excludedCuisines || [],
-        // Provide safe fallback values for everything to prevent undefined crashes!
-        goal: preferencesData.goal || "maintain", 
+        goal: preferencesData.goal || "maintain",
         monthlyBudget: preferencesData.monthlyBudget || 0,
-        weight: preferencesData.currentWeight || 0, 
-        version: 1, 
-        meals: [], 
+        weight: preferencesData.currentWeight || 0,
+        version: 1,
         completedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      }
+        updatedAt: serverTimestamp(),
+      },
     });
     console.log("Preferences saved successfully!");
   } catch (error) {
@@ -142,32 +140,45 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
   try {
     const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
 
-    // Loop through the meals Gemini generated
-    for (const recipeData of mealPlan) {
-      
-      // Process ingredients into References just like the Python script
-      const processedIngredientItems = (recipeData.ingredientItems || []).map(item => ({
+    // Delete existing plan docs before saving new plan
+    const existingDocs = await getDocs(mealPlanCollectionRef);
+    await Promise.all(existingDocs.docs.map((mealDoc) => deleteDoc(mealDoc.ref)));
+
+    const mealsToSave = Array.isArray(mealPlan)
+      ? mealPlan
+      : (mealPlan.weeks || []).flatMap((week) =>
+          (week.meals || []).map((meal) => ({
+            ...meal,
+            weekNumber: week.weekNumber,
+          })),
+        );
+
+    for (const recipeData of mealsToSave) {
+      const processedIngredientItems = (recipeData.ingredientItems || []).map((item) => ({
         ...item,
-        ingredientRef: doc(db, "ingredients", item.ingredientId) 
+        ingredientRef: item.ingredientId ? doc(db, "ingredients", item.ingredientId) : null,
       }));
+
+      const difficulty = recipeData.difficulty || "Medium";
 
       const firestoreDoc = {
         ...recipeData,
-        // Ensure formatting matches your DB schema
-        carbs: typeof recipeData.carbs === 'number' ? `${recipeData.carbs}g` : recipeData.carbs,
-        fat: typeof recipeData.fat === 'number' ? `${recipeData.fat}g` : recipeData.fat,
-        protein: typeof recipeData.protein === 'number' ? `${recipeData.protein}g` : recipeData.protein,
-        difficulty: recipeData.difficulty?.charAt(0).toUpperCase() + recipeData.difficulty?.slice(1),
+        day: recipeData.day || "Monday",
+        weekNumber: Number(recipeData.weekNumber) || 1,
+        carbs: typeof recipeData.carbs === "number" ? `${recipeData.carbs}g` : recipeData.carbs,
+        fat: typeof recipeData.fat === "number" ? `${recipeData.fat}g` : recipeData.fat,
+        protein: typeof recipeData.protein === "number" ? `${recipeData.protein}g` : recipeData.protein,
+        difficulty: difficulty.charAt(0).toUpperCase() + difficulty.slice(1),
         ingredientItems: processedIngredientItems,
         ownerId: uid,
-        updatedAt: serverTimestamp()
+        status: "completed",
+        updatedAt: serverTimestamp(),
       };
 
-      // 1. Save to the user's 'mealPlan' subcollection
       await addDoc(mealPlanCollectionRef, firestoreDoc);
     }
 
-    console.log("Gemini meal plan synced to user's mealPlan subcollection!");
+    console.log("Meal plan replaced and synced to user mealPlan subcollection.");
   } catch (error) {
     console.error("Error syncing Gemini plan:", error);
     throw error;
@@ -179,45 +190,61 @@ export const loadMealPlanFromFirestore = async (uid) => {
 
   try {
     const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
-    const querySnapshot = await getDocs(mealPlanCollectionRef);
-    
+    const [querySnapshot, userSnap] = await Promise.all([
+      getDocs(mealPlanCollectionRef),
+      getDoc(doc(db, "users", uid)),
+    ]);
+
     if (querySnapshot.empty) {
       return null;
     }
 
-    const meals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const meals = querySnapshot.docs.map((mealDoc) => ({ id: mealDoc.id, ...mealDoc.data() }));
 
-    // For now, we'll just use the first meal and create a placeholder structure.
-    const firstMeal = meals[0];
+    const weeksMap = new Map();
 
-    const placeholderMeal = (day, name) => ({
-      id: `${name.toLowerCase().replace(/\s/g, '_')}_${day.toLowerCase()}`,
-      day: day,
-      name: name,
-      status: "pending",
-    });
+    for (const meal of meals) {
+      const weekNumber = Number(meal.weekNumber) || 1;
+      const normalizedMeal = {
+        ...meal,
+        id: meal.id,
+        day: meal.day || DAYS[0],
+        status: meal.status || "completed",
+        prepTime: meal.prepTime || "0 min",
+        totalCost: meal.totalCost || "$0.00",
+        calories: Number(meal.calories) || 0,
+        description: meal.description || "",
+        image: meal.image || "/api/placeholder/400/300",
+      };
 
-    const fullMealPlan = {
-      preferences: {}, // We'll need to fetch this separately if needed
-      weeks: [
-        {
-          weekNumber: 1,
-          meals: [
-            { ...firstMeal, day: "Monday", status: "completed" },
-            placeholderMeal("Tuesday", "Chicken Stir-Fry"),
-            placeholderMeal("Wednesday", "Spaghetti Bolognese"),
-            placeholderMeal("Thursday", "Lentil Soup"),
-            placeholderMeal("Friday", "Fish Tacos"),
-            placeholderMeal("Saturday", "Beef Burgers"),
-            placeholderMeal("Sunday", "Roast Chicken"),
-          ]
-        },
-        // Add more placeholder weeks if needed
-      ]
+      if (!weeksMap.has(weekNumber)) {
+        weeksMap.set(weekNumber, []);
+      }
+
+      weeksMap.get(weekNumber).push(normalizedMeal);
+    }
+
+    const weeks = Array.from(weeksMap.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([weekNumber, weekMeals]) => ({
+        weekNumber,
+        meals: weekMeals.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day)),
+      }));
+
+    const userData = userSnap.exists() ? userSnap.data() : {};
+    const profile = userData.mealPlanProfile || {};
+
+    return {
+      preferences: {
+        monthlyBudget: profile.monthlyBudget || 0,
+        goal: profile.goal || "maintain",
+        currentWeight: profile.weight || 0,
+        allergies: profile.allergies || [],
+        excludedCuisines: profile.excludedCuisines || [],
+      },
+      weeks,
+      createdAt: new Date().toISOString(),
     };
-
-    return fullMealPlan;
-
   } catch (error) {
     console.error("Error loading meal plan from Firestore:", error);
     return null;

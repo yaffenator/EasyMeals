@@ -1,37 +1,46 @@
 'use client';
 
-import { use, useState, useEffect } from 'react'; // Added useEffect
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/dashboard-heading';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Separator } from '../../components/ui/separator';
 import ImageWithFallback from '../../components/Figma/imageWithFallback';
-import { Clock, DollarSign, Users, ChefHat, ArrowLeft, Flame, Heart, Loader2 } from 'lucide-react';
-import { loadMealPlanFromFirestore, auth, db } from '../../firebase';
+import { Clock, DollarSign, Users, ChefHat, ArrowLeft, Flame, Loader2, Lightbulb } from 'lucide-react';
+import { loadMealPlanFromFirestore, auth } from '../../firebase';
 import { useAuth } from '../../context/auth';
 import { generateRecipeDetails } from '../../utils/recipeDetails';
 import Link from 'next/link';
 
+interface Meal {
+  id: string;
+  status?: string;
+  [key: string]: unknown;
+}
+
+interface Week {
+  meals: Meal[];
+}
+
+interface MealPlan {
+  weeks: Week[];
+}
+
 export default function Recipe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
   const { currentUser } = useAuth();
-  const [mealPlan, setMealPlan] = useState<any>(null);
+  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load meal plan on mount
   useEffect(() => {
     const fetchMealPlan = async () => {
       const uid = currentUser?.uid || auth.currentUser?.uid;
       if (uid) {
         const plan = await loadMealPlanFromFirestore(uid);
         if (plan) {
-          setMealPlan(plan);
+          setMealPlan(plan as MealPlan);
         }
       }
       setLoading(false);
@@ -40,23 +49,20 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     fetchMealPlan();
   }, [currentUser]);
 
-  // Find the recipe across all weeks
-  let recipe: any = null;
+  let recipe: Meal | null = null;
   if (mealPlan) {
     for (const week of mealPlan.weeks) {
-      recipe = week.meals.find((meal: any) => meal.id === id);
+      recipe = week.meals.find((meal) => meal.id === id) || null;
       if (recipe) break;
     }
   }
 
-  // FIX: Move redirection to useEffect to avoid "SetState in Render" error
   useEffect(() => {
     if (!loading && (!mealPlan || !recipe)) {
       router.push('/dashboard');
     }
   }, [loading, mealPlan, recipe, router]);
 
-  // Show loading state while finding recipe
   if (loading || !recipe) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -65,8 +71,7 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     );
   }
 
-  // Handle "Pending" state if the user clicks a recipe before AI finishes it
-  if (recipe.status === "pending") {
+  if (recipe.status === 'pending') {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
         <Header />
@@ -82,7 +87,6 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     );
   }
 
-  // Generate full recipe details once we know it's "completed"
   const detailedRecipe = generateRecipeDetails(recipe);
 
   return (
@@ -130,8 +134,9 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <DollarSign className="w-6 h-6 text-primary mb-2" />
-                <div className="text-2xl mb-1">{detailedRecipe.cost}</div>
-                <div className="text-sm text-muted-foreground">Cost</div>
+                <div className="text-2xl mb-1">{detailedRecipe.totalCost}</div>
+                <div className="text-xs text-muted-foreground mb-1">Total Cost</div>
+                <div className="text-xs text-muted-foreground">{detailedRecipe.costPerServing}/serving</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
@@ -152,7 +157,7 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                   <ul className="space-y-2">
                     {detailedRecipe.ingredients.map((ing, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="text-primary mt-1.5">•</span><span>{ing}</span>
+                        <span className="text-primary mt-1.5">-</span><span>{ing}</span>
                       </li>
                     ))}
                   </ul>
@@ -190,6 +195,25 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                   <div className="flex justify-between text-sm"><span>Carbs</span><span>{detailedRecipe.carbs}</span></div>
                   <div className="flex justify-between text-sm"><span>Fat</span><span>{detailedRecipe.fat}</span></div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-primary flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5" /> Tips
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {detailedRecipe.tips.length ? (
+                  <ul className="space-y-2">
+                    {detailedRecipe.tips.map((tip, i) => (
+                      <li key={i} className="text-sm text-muted-foreground">{i + 1}. {tip}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No extra tips for this recipe.</p>
+                )}
               </CardContent>
             </Card>
           </div>
