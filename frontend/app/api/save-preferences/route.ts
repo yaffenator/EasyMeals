@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const timestamp = new Date().toISOString(); // Using ISO for Firebase compatibility
 
     const model = genAI.getGenerativeModel({ 
-        model: "gemini-2.5-flash",
+        model: "gemini-3-flash-preview",
         generationConfig: { responseMimeType: "application/json" }
     });
 /*
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       Ensure all ingredientIds are consistent between the recipes and the newIngredients list.
     `;
     
-*/
+
     const prompt = `
       You are a nutritionist and database architect. Create a 1 day meal plan, just focusing on making dinners.
       use these preferneces to guide the meal plan, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
@@ -57,6 +57,23 @@ export async function POST(request: Request) {
          - "ingredientItems": An array of maps: { "ingredientId": "snake_case_id", "originalText": "string", "quantity": number, "unit": "string", "notes": "string" }
          - "ingredients": A simple string array of the items.
          - "createdAt": "${timestamp}", "updatedAt": "${timestamp}"
+    `;
+*/
+    const prompt = `
+      Create a 4-week list of meal NAMES only.
+      use these preferneces to guide the meals, ensuring there are no mismatched between what the user wants and what is outputted: ${JSON.stringify(preferences)}
+      example format for returnd JSON: 
+      {
+        "weeks": [
+          {
+            "weekNumber": 1,
+            "meals": [
+              { "day": "Monday", "name": "Honey Garlic Salmon", "status": "pending" },
+              ...
+            ]
+          }
+        ]
+      }
     `;
 
     const result = await model.generateContent(prompt);

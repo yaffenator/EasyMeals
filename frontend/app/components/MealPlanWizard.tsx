@@ -14,7 +14,7 @@ import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radioGroup";
 import { Checkbox } from "./ui/checkbox";
 import { ChevronRight, ChevronLeft, Plus, X, Loader2 } from "lucide-react";
-import { updateUserPreferences } from "../firebase";
+import { updateUserPreferences, uploadMealPlanToUser } from "../firebase";
 import { auth } from "../firebase";
 
 interface MealPlanWizardProps {
@@ -99,6 +99,12 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         if (!response.ok) throw new Error("Generation failed");
 
         const fullMealPlan = await response.json();
+
+        const uid = auth.currentUser?.uid;
+        if (uid && fullMealPlan.mealPlan) {
+          await uploadMealPlanToUser(uid, fullMealPlan.mealPlan);
+        }
+
         onComplete(fullMealPlan);
       } catch (error) {
         console.error("Error:", error);

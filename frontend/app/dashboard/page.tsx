@@ -13,7 +13,7 @@ import {
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import ImageWithFallback from "../components/Figma/imageWithFallback";
-import { MealPlanWizard, MealPlanData } from "../components/MealPlanWizard";
+import { MealPlanWizard } from "../components/MealPlanWizard";
 import Link from "next/link";
 import {
   Clock,
@@ -23,9 +23,9 @@ import {
   Calendar,
   Soup,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import {
-  generateMealPlan,
   saveMealPlan,
   loadMealPlan,
   clearMealPlan,
@@ -33,7 +33,7 @@ import {
 } from "../utils/MealPlanGenerator";
 import { useAuth } from "../context/auth";
 import { useRouter } from "next/navigation";
-import { updateUserPreferences, auth, db } from "../firebase";
+import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function Dashboard() {
@@ -45,6 +45,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { currentUser } = useAuth();
 
+  // Load existing plan on mount
   useEffect(() => {
     const existingPlan = loadMealPlan();
     if (existingPlan) {
@@ -52,65 +53,87 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Check if the user has completed the meal plan questionnaire, redirect them to a different dashboard layout if not
+  // Auth check
   useEffect(() => {
-    if (currentUser) {
-      console.log("Current user in Dashboard:", currentUser?.displayName);
-    } else {
+    if (!currentUser && !auth.currentUser) {
       router.push("/login");
     }
+  }, [currentUser, router]);
 
-    const savedPlan = loadMealPlan();
-    if (savedPlan) {
-      setMealPlan(savedPlan);
-    }
-  }, [currentUser]);
-
+  // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
       const uid = currentUser?.uid || auth.currentUser?.uid;
-
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
           const userSnap = await getDoc(userRef);
-
           if (userSnap.exists()) {
             const userData = userSnap.data();
-            const hasCompleted =
-              userData.mealPlanProfile?.questionnaireCompleted;
-
-            if (!hasCompleted) {
-              setQuestionnaireCompleted(false);
-            } else {
-              setQuestionnaireCompleted(true);
-            }
-          } else {
-            setQuestionnaireCompleted(false);
+            setQuestionnaireCompleted(!!userData.mealPlanProfile?.questionnaireCompleted);
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
         }
       }
     };
-
     checkQuestionnaireStatus();
+  }, [currentUser, mealPlan]);
+
+  // PROGRESSIVE GENERATION LOGIC: 
+  // Watches for "pending" meals and fills them in one-by-one
+  useEffect(() => {
+    const fillPendingMeals = async () => {
+      if (!mealPlan || !mealPlan.weeks) return;
+
+      // Find the first meal that is still "pending"
+      const allMeals = mealPlan.weeks.flatMap(w => w.meals);
+      const pendingMeal = allMeals.find((m: any) => m.status === "pending");
+
+      if (pendingMeal) {
+        try {
+          const res = await fetch("/api/generate-recipe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mealName: pendingMeal.name,
+              preferences: mealPlan.preferences
+            }),
+          });
+
+          if (!res.ok) throw new Error("Individual generation failed");
+          
+          const responseData = await res.json();
+          // Assuming generate-recipe returns { mealPlan: { ...recipeData } }
+          const completedRecipe = responseData.mealPlan;
+
+          // Update local state by swapping the pending meal for the completed one
+          const updatedWeeks = mealPlan.weeks.map(week => ({
+            ...week,
+            meals: week.meals.map((m: any) => 
+              m.id === pendingMeal.id 
+                ? { ...completedRecipe, id: m.id, day: m.day, status: "completed" } 
+                : m
+            )
+          }));
+
+          const newPlan = { ...mealPlan, weeks: updatedWeeks };
+          setMealPlan(newPlan);
+          saveMealPlan(newPlan);
+        } catch (e) {
+          console.error("Failed to generate", pendingMeal.name, e);
+        }
+      }
+    };
+
+    fillPendingMeals();
   }, [mealPlan]);
 
-  const handleCreateMealPlan = async (finalData: MealPlanData) => {
-    try {
-      // Generate and save the meal plan locally
-      const newPlan = generateMealPlan(finalData);
-      saveMealPlan(newPlan);
-
-      // This tells the UI to re-render and show the newly generated plan.
-      setMealPlan(newPlan);
-
-      // Hide the wizard overlay so the user can see their dashboard
-      setShowWizard(false);
-    } catch (error) {
-      console.error("Error creating meal plan:", error);
-    }
+  const handleCreateMealPlan = (fullMealPlan: any) => {
+    setMealPlan(fullMealPlan); 
+    saveMealPlan(fullMealPlan);
+    setQuestionnaireCompleted(true);
+    setShowWizard(false);
   };
 
   const handleGenerateNew = () => {
@@ -119,7 +142,8 @@ export default function Dashboard() {
     setShowWizard(true);
   };
 
-  if (!questionnaireCompleted || !mealPlan) {
+  // GUARD CLAUSE: Show "Create" prompt if no plan exists
+  if (!questionnaireCompleted || !mealPlan || !mealPlan.weeks) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
         <DashboardHeading />
@@ -129,12 +153,9 @@ export default function Dashboard() {
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
               Welcome, {currentUser?.displayName || "Chef"}!
             </h1>
-            <h2 className="text-2xl md:text-2xl text-primary mb-4">
-              Let's Create Your Meal Planner
-            </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Generate a personalized 4-week meal plan tailored to your budget,
-              goals, and dietary needs.
+              It looks like you haven't generated your personalized plan yet.
+              Let's create a 4-week meal plan tailored to your budget and goals.
             </p>
             <Button
               size="lg"
@@ -146,39 +167,33 @@ export default function Dashboard() {
           </div>
         </main>
         {showWizard && (
-          <MealPlanWizard
-            onComplete={handleCreateMealPlan}
-            onCancel={() => setShowWizard(false)}
-          />
+          <MealPlanWizard onComplete={handleCreateMealPlan} onCancel={() => setShowWizard(false)} />
         )}
       </div>
     );
   }
 
-  const currentWeek = mealPlan.weeks[selectedWeek - 1];
-  const totalWeeklyCost = currentWeek.meals.reduce(
-    (sum, meal) => sum + parseFloat(meal.cost.replace("$", "")),
-    0,
-  );
-  const avgCostPerMeal = totalWeeklyCost / currentWeek.meals.length;
-  const avgPrepTime =
-    currentWeek.meals.reduce((sum, meal) => sum + parseInt(meal.prepTime), 0) /
-    currentWeek.meals.length;
+  // Calculate current view data
+  const currentWeek = mealPlan.weeks[selectedWeek - 1] || { meals: [] };
+  const totalWeeklyCost = currentWeek.meals?.reduce(
+    (sum, meal) => sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
+    0
+  ) || 0;
+  
+  const avgPrepTime = currentWeek.meals?.length
+    ? currentWeek.meals.reduce((sum, meal) => sum + parseInt(String(meal.prepTime || 0)), 0) / currentWeek.meals.length
+    : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
       <DashboardHeading />
       <main className="container mx-auto px-4 py-8">
-        {/* Header Section */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
-            Hello,{" "}
-            {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
-            Your Meal Plan is Here.
+            Hello, {currentUser?.displayName || currentUser?.email?.split("@")[0]}!
           </h1>
           <p className="text-muted-foreground">
-            Personalized recipes optimized for your $
-            {mealPlan.preferences.monthlyBudget}/month budget
+            Recipes optimized for your ${mealPlan?.preferences?.monthlyBudget || "0"}/month budget
           </p>
         </div>
 
@@ -192,15 +207,9 @@ export default function Dashboard() {
             {mealPlan.weeks.map((week) => (
               <Button
                 key={week.weekNumber}
-                variant={
-                  selectedWeek === week.weekNumber ? "default" : "outline"
-                }
+                variant={selectedWeek === week.weekNumber ? "default" : "outline"}
                 onClick={() => setSelectedWeek(week.weekNumber)}
-                className={
-                  selectedWeek === week.weekNumber
-                    ? "bg-primary hover:bg-primary/90"
-                    : ""
-                }
+                className={selectedWeek === week.weekNumber ? "bg-primary" : ""}
               >
                 Week {week.weekNumber}
               </Button>
@@ -208,153 +217,77 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Weekly Summary Stats */}
+        {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <CardDescription>Weekly Cost</CardDescription>
-                  <CardTitle className="text-2xl">
-                    ${totalWeeklyCost.toFixed(2)}
-                  </CardTitle>
-                </div>
-              </div>
+              <CardDescription>Weekly Cost</CardDescription>
+              <CardTitle className="text-2xl">${totalWeeklyCost.toFixed(2)}</CardTitle>
             </CardHeader>
           </Card>
-
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <ChefHat className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <CardDescription>Avg. Cost Per Meal</CardDescription>
-                  <CardTitle className="text-2xl">
-                    ${avgCostPerMeal.toFixed(2)}
-                  </CardTitle>
-                </div>
-              </div>
+              <CardDescription>Avg. Prep Time</CardDescription>
+              <CardTitle className="text-2xl">{Math.round(avgPrepTime)} min</CardTitle>
             </CardHeader>
           </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <CardDescription>Servings Per Meal</CardDescription>
-                  <CardTitle className="text-2xl">4</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <CardDescription>Avg. Prep Time</CardDescription>
-                  <CardTitle className="text-2xl">
-                    {Math.round(avgPrepTime)} min
-                  </CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
+          {/* Add more stat cards as needed */}
         </div>
 
         {/* Meal Plan Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentWeek.meals.map((meal) => (
-            <Link key={meal.id} href={`/recipe/${meal.id}`}>
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                <div className="relative h-48">
-                  <ImageWithFallback
-                    src={meal.image}
-                    alt={meal.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-                    {meal.day}
-                  </Badge>
-                </div>
-                <CardHeader className="pb-0 pt-0">
-                  <CardTitle className="text-xl">{meal.name}</CardTitle>
-                  <CardDescription>{meal.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-2 text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{meal.prepTime}</span>
+          {currentWeek.meals.map((meal: any, index: number) => (
+            <div key={meal.id || `meal-${index}`} className="h-full">
+              {meal.status === "pending" ? (
+                /* PROGRESSIVE LOADING CARD */
+                <Card className="overflow-hidden border-dashed border-2 flex flex-col items-center justify-center p-12 h-full bg-muted/20">
+                  <RefreshCw className="w-8 h-8 text-muted-foreground animate-spin mb-4" />
+                  <h3 className="font-medium text-muted-foreground text-center">
+                    Drafting {meal.name}...
+                  </h3>
+                  <p className="text-xs text-muted-foreground/60 text-center mt-2">
+                    AI is calculating ingredients & costs
+                  </p>
+                </Card>
+              ) : (
+                /* COMPLETED MEAL CARD */
+                <Link href={`/recipe/${meal.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    <div className="relative h-48">
+                      <ImageWithFallback
+                        src={meal.image || "/api/placeholder/400/300"}
+                        alt={meal.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
+                        {meal.day}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <DollarSign className="w-4 h-4" />
-                      <span>{meal.cost}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Users className="w-4 h-4" />
-                      <span>{meal.servings} servings</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Soup className="w-4 h-4" />
-                      {meal.calories} cal
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault(); // Prevents the Link from triggering
-                        e.stopPropagation(); // Prevents the click from bubbling up to the Card
-                        console.log("Refreshing meal...");
-                      }}
-                      className="w-full flex items-center justify-center gap-2 py-2 text-sm font-medium text-primary bg-primary/5 hover:bg-primary/10 rounded-md transition-colors border border-primary/20 hover:cursor-pointer"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Refresh Meal
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                    <CardHeader className="pb-0 pt-4">
+                      <CardTitle className="text-xl">{meal.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">{meal.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1"><Clock className="w-4 h-4" /> {meal.prepTime}</div>
+                        <div className="flex items-center gap-1"><DollarSign className="w-4 h-4" /> {meal.totalCost}</div>
+                        <div className="flex items-center gap-1"><Soup className="w-4 h-4" /> {meal.calories} cal</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
+            </div>
           ))}
         </div>
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <Button
-            size="lg"
-            onClick={handleGenerateNew}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            Generate New Plan
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="border-primary text-primary hover:bg-accent"
-          >
-            Download Shopping List
-          </Button>
+          <Button size="lg" onClick={handleGenerateNew}>Generate New Plan</Button>
+          <Button size="lg" variant="outline">Download Shopping List</Button>
         </div>
       </main>
       <Footer />
-      {showWizard && (
-        <MealPlanWizard
-          onComplete={handleCreateMealPlan}
-          onCancel={() => setShowWizard(false)}
-        />
-      )}
     </div>
   );
 }

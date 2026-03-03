@@ -1,123 +1,164 @@
 {
-  "mealPlan": [
+  "weeks": [
     {
-      "name": "Lemon Herb Baked Salmon with Roasted Asparagus and Quinoa",
-      "calories": 639,
-      "carbs": 38,
-      "fat": 32,
-      "protein": 49,
-      "prepTime": "20 minutes",
-      "cookTime": "25 minutes",
-      "servings": 1,
-      "costPerServing": 13,
-      "totalCost": 13,
-      "mealType": "Dinner",
-      "difficulty": "Easy",
-      "instructions": "1. Preheat oven to 400°F (200°C). In a small saucepan, combine 1/4 cup dry quinoa with 1/2 cup water or vegetable broth. Bring to a boil, then reduce heat to low, cover, and simmer for 15-20 minutes, or until all liquid is absorbed and quinoa is fluffy. Set aside.\n2. Wash asparagus and trim the tough ends. Toss with 1/2 tbsp olive oil, a pinch of salt, and pepper on a baking sheet.\n3. Pat salmon fillet dry with paper towels. In a small bowl, mix the remaining 1/2 tbsp olive oil, minced garlic, chopped dill, chopped parsley, lemon juice (from 1/4 lemon), salt, and pepper. Spread this mixture evenly over the top of the salmon fillet.\n4. Place the salmon fillet on the same baking sheet as the asparagus (or a separate small one). Roast in the preheated oven for 12-15 minutes, or until salmon is cooked through and flakes easily with a fork, and asparagus is tender-crisp.\n5. Serve the baked salmon and roasted asparagus immediately alongside the cooked quinoa. Garnish with fresh lemon slices (from the remaining 1/4 lemon) if desired.",
-      "tags": [
-        "Fish",
-        "Healthy",
-        "Weight Loss",
-        "Mediterranean",
-        "Gluten-Free",
-        "Dairy-Free"
-      ],
-      "tips": "For an extra flavor boost, try adding a sprinkle of chili flakes to the salmon before baking if you tolerate a mild warmth, or use smoked paprika for a non-spicy alternative. Leftover quinoa can be stored in the fridge for up to 3-4 days and used in salads or as a side dish. Ensure your salmon is completely thawed if using frozen.",
-      "source": "generated",
-      "ingredientItems": [
+      "weekNumber": 1,
+      "meals": [
         {
-          "ingredientId": "salmon_fillet",
-          "originalText": "6 oz salmon fillet",
-          "quantity": 6,
-          "unit": "oz",
-          "notes": "skin on or off, your preference"
+          "day": "Monday",
+          "name": "Lemon Herb Roasted Chicken with Brown Rice",
+          "status": "pending"
         },
         {
-          "ingredientId": "asparagus_spears",
-          "originalText": "1/2 lb asparagus spears",
-          "quantity": 0.5,
-          "unit": "lb",
-          "notes": "trimmed"
+          "day": "Tuesday",
+          "name": "Beef and Broccoli Stir-fry",
+          "status": "pending"
         },
         {
-          "ingredientId": "quinoa_dry",
-          "originalText": "1/4 cup dry quinoa",
-          "quantity": 0.25,
-          "unit": "cup",
-          "notes": ""
+          "day": "Wednesday",
+          "name": "Coconut Chickpea Curry with Spinach",
+          "status": "pending"
         },
         {
-          "ingredientId": "water_or_broth",
-          "originalText": "1/2 cup water or vegetable broth",
-          "quantity": 0.5,
-          "unit": "cup",
-          "notes": ""
+          "day": "Thursday",
+          "name": "Baked Cod with Roasted Sweet Potatoes",
+          "status": "pending"
         },
         {
-          "ingredientId": "lemon",
-          "originalText": "1/2 lemon",
-          "quantity": 0.5,
-          "unit": "whole",
-          "notes": "half sliced, half juiced"
+          "day": "Friday",
+          "name": "Spaghetti Aglio e Olio with Grilled Shrimp",
+          "status": "pending"
         },
         {
-          "ingredientId": "olive_oil",
-          "originalText": "1 tbsp olive oil",
-          "quantity": 1,
-          "unit": "tbsp",
-          "notes": "divided"
+          "day": "Saturday",
+          "name": "Turkey Tacos with Corn Tortillas and Avocado",
+          "status": "pending"
         },
         {
-          "ingredientId": "garlic_cloves",
-          "originalText": "2 cloves garlic",
-          "quantity": 2,
-          "unit": "cloves",
-          "notes": "minced"
-        },
-        {
-          "ingredientId": "fresh_dill",
-          "originalText": "1 tbsp fresh dill",
-          "quantity": 1,
-          "unit": "tbsp",
-          "notes": "chopped"
-        },
-        {
-          "ingredientId": "fresh_parsley",
-          "originalText": "1 tbsp fresh parsley",
-          "quantity": 1,
-          "unit": "tbsp",
-          "notes": "chopped"
-        },
-        {
-          "ingredientId": "salt",
-          "originalText": "1/2 tsp salt",
-          "quantity": 0.5,
-          "unit": "tsp",
-          "notes": "to taste"
-        },
-        {
-          "ingredientId": "black_pepper",
-          "originalText": "1/4 tsp black pepper",
-          "quantity": 0.25,
-          "unit": "tsp",
-          "notes": "to taste"
+          "day": "Sunday",
+          "name": "Slow Cooker Beef Stew with Potatoes and Carrots",
+          "status": "pending"
         }
-      ],
-      "ingredients": [
-        "6 oz salmon fillet",
-        "1/2 lb asparagus spears",
-        "1/4 cup dry quinoa",
-        "1/2 cup water or vegetable broth",
-        "1/2 lemon",
-        "1 tbsp olive oil",
-        "2 cloves garlic",
-        "1 tbsp fresh dill",
-        "1 tbsp fresh parsley",
-        "1/2 tsp salt",
-        "1/4 tsp black pepper"
-      ],
-      "createdAt": "2026-03-02T04:36:47.114Z",
-      "updatedAt": "2026-03-02T04:36:47.114Z"
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Honey Ginger Glazed Salmon",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Black Bean and Corn Stuffed Bell Peppers",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Chicken Thighs with Garlic and Rosemary",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Red Lentil Soup with Crusty Bread",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Pan-Seared Tilapia with Quinoa Salad",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Sausage and Vegetable Sheet Pan Bake",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Roasted Pork Tenderloin with Asparagus",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "weekNumber": 3,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Teriyaki Tofu with Steamed Bok Choy",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Ground Turkey and Green Bean Stir-fry",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Pasta with Dairy-Free Basil Pesto and Walnuts",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Grilled Chicken Greek Salad with Olive Oil Dressing",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Tuna Steaks with Cucumber Tomato Salad",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Chili Con Carne with Diced Onions",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Lemon Garlic Whole Roasted Chicken",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "weekNumber": 4,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Eggplant Stir-fry with Cashews and Rice",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Baked Chicken Thighs with Zucchini Noodles",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Quinoa Bowl with Black Beans and Roasted Corn",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Beef and Cabbage Skillet",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Salmon Cakes with Mixed Greens",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Pulled Pork Carnitas with Salsa Verde",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Mediterranean Roasted White Fish with Olives",
+          "status": "pending"
+        }
+      ]
     }
   ]
 }

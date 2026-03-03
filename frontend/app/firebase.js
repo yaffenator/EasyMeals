@@ -8,7 +8,7 @@ import {
   GithubAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp,collection, addDoc, arrayUnion } from "firebase/firestore";
 import { UserPlus } from "lucide-react";
 
 // firebase configuration object that uses environment variables to store sensitive information
@@ -132,6 +132,52 @@ export const updateUserPreferences = async (uid, preferencesData) => {
     console.log("Preferences saved successfully!");
   } catch (error) {
     console.error("Error saving preferences:", error);
+    throw error;
+  }
+};
+
+export const uploadMealPlanToUser = async (uid, mealPlan) => {
+  if (!uid || !mealPlan) return;
+
+  try {
+    const userRef = doc(db, "users", uid);
+    const uploadedRecipeRefs = [];
+
+    // Loop through the meals Gemini generated
+    for (const recipeData of mealPlan) {
+      
+      // Process ingredients into References just like the Python script
+      const processedIngredientItems = (recipeData.ingredientItems || []).map(item => ({
+        ...item,
+        ingredientRef: doc(db, "ingredients", item.ingredientId) 
+      }));
+
+      const firestoreDoc = {
+        ...recipeData,
+        // Ensure formatting matches your DB schema
+        carbs: typeof recipeData.carbs === 'number' ? `${recipeData.carbs}g` : recipeData.carbs,
+        fat: typeof recipeData.fat === 'number' ? `${recipeData.fat}g` : recipeData.fat,
+        protein: typeof recipeData.protein === 'number' ? `${recipeData.protein}g` : recipeData.protein,
+        difficulty: recipeData.difficulty?.charAt(0).toUpperCase() + recipeData.difficulty?.slice(1),
+        ingredientItems: processedIngredientItems,
+        ownerId: uid,
+        updatedAt: serverTimestamp()
+      };
+
+      // 1. Save to the global 'recipes' collection
+      const recipeRef = await addDoc(collection(db, "recipes"), firestoreDoc);
+      uploadedRecipeRefs.push(recipeRef);
+    }
+
+    // 2. Link these new recipes to the user's profile array
+    await updateDoc(userRef, {
+      "mealPlanProfile.meals": arrayUnion(...uploadedRecipeRefs),
+      "mealPlanProfile.updatedAt": serverTimestamp()
+    });
+
+    console.log("Gemini meal plan synced to Firestore!");
+  } catch (error) {
+    console.error("Error syncing Gemini plan:", error);
     throw error;
   }
 };
