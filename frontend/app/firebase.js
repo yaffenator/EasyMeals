@@ -138,49 +138,20 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
   if (!uid || !mealPlan) return;
 
   try {
-    const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
+    const userRef = doc(db, "users", uid);
+    
+    // We save the entire object into one field called 'currentMealPlan'
+    // This makes 'Delete and Re-add' unnecessary and prevents duplication.
+    await updateDoc(userRef, {
+      currentMealPlan: {
+        ...mealPlan,
+        updatedAt: new Date().toISOString()
+      }
+    });
 
-    // Delete existing plan docs before saving new plan
-    const existingDocs = await getDocs(mealPlanCollectionRef);
-    await Promise.all(existingDocs.docs.map((mealDoc) => deleteDoc(mealDoc.ref)));
-
-    const mealsToSave = Array.isArray(mealPlan)
-      ? mealPlan
-      : (mealPlan.weeks || []).flatMap((week) =>
-          (week.meals || []).map((meal) => ({
-            ...meal,
-            weekNumber: week.weekNumber,
-          })),
-        );
-
-    for (const recipeData of mealsToSave) {
-      const processedIngredientItems = (recipeData.ingredientItems || []).map((item) => ({
-        ...item,
-        ingredientRef: item.ingredientId ? doc(db, "ingredients", item.ingredientId) : null,
-      }));
-
-      const difficulty = recipeData.difficulty || "Medium";
-
-      const firestoreDoc = {
-        ...recipeData,
-        day: recipeData.day || "Monday",
-        weekNumber: Number(recipeData.weekNumber) || 1,
-        carbs: typeof recipeData.carbs === "number" ? `${recipeData.carbs}g` : recipeData.carbs,
-        fat: typeof recipeData.fat === "number" ? `${recipeData.fat}g` : recipeData.fat,
-        protein: typeof recipeData.protein === "number" ? `${recipeData.protein}g` : recipeData.protein,
-        difficulty: difficulty.charAt(0).toUpperCase() + difficulty.slice(1),
-        ingredientItems: processedIngredientItems,
-        ownerId: uid,
-        status: "completed",
-        updatedAt: serverTimestamp(),
-      };
-
-      await addDoc(mealPlanCollectionRef, firestoreDoc);
-    }
-
-    console.log("Meal plan replaced and synced to user mealPlan subcollection.");
+    console.log("Meal plan synced successfully.");
   } catch (error) {
-    console.error("Error syncing Gemini plan:", error);
+    console.error("Error syncing meal plan:", error);
     throw error;
   }
 };
@@ -189,64 +160,16 @@ export const loadMealPlanFromFirestore = async (uid) => {
   if (!uid) return null;
 
   try {
-    const mealPlanCollectionRef = collection(db, "users", uid, "mealPlan");
-    const [querySnapshot, userSnap] = await Promise.all([
-      getDocs(mealPlanCollectionRef),
-      getDoc(doc(db, "users", uid)),
-    ]);
-
-    if (querySnapshot.empty) {
-      return null;
+    const userSnap = await getDoc(doc(db, "users", uid));
+    
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      // Look for the single object we saved
+      return data.currentMealPlan || null;
     }
-
-    const meals = querySnapshot.docs.map((mealDoc) => ({ id: mealDoc.id, ...mealDoc.data() }));
-
-    const weeksMap = new Map();
-
-    for (const meal of meals) {
-      const weekNumber = Number(meal.weekNumber) || 1;
-      const normalizedMeal = {
-        ...meal,
-        id: meal.id,
-        day: meal.day || DAYS[0],
-        status: meal.status || "completed",
-        prepTime: meal.prepTime || "0 min",
-        totalCost: meal.totalCost || "$0.00",
-        calories: Number(meal.calories) || 0,
-        description: meal.description || "",
-        image: meal.image || "/api/placeholder/400/300",
-      };
-
-      if (!weeksMap.has(weekNumber)) {
-        weeksMap.set(weekNumber, []);
-      }
-
-      weeksMap.get(weekNumber).push(normalizedMeal);
-    }
-
-    const weeks = Array.from(weeksMap.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([weekNumber, weekMeals]) => ({
-        weekNumber,
-        meals: weekMeals.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day)),
-      }));
-
-    const userData = userSnap.exists() ? userSnap.data() : {};
-    const profile = userData.mealPlanProfile || {};
-
-    return {
-      preferences: {
-        monthlyBudget: profile.monthlyBudget || 0,
-        goal: profile.goal || "maintain",
-        currentWeight: profile.weight || 0,
-        allergies: profile.allergies || [],
-        excludedCuisines: profile.excludedCuisines || [],
-      },
-      weeks,
-      createdAt: new Date().toISOString(),
-    };
+    return null;
   } catch (error) {
-    console.error("Error loading meal plan from Firestore:", error);
+    console.error("Error loading meal plan:", error);
     return null;
   }
 };

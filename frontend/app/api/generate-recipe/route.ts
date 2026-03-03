@@ -35,9 +35,8 @@ export async function POST(request: Request) {
     // Prompt focused on hydrating ONE specific meal
     const prompt = `
       You are a professional chef. Provide full recipe details for the meal: "${mealName}".
-      User Preferences: ${JSON.stringify(preferences)}
-      Make sure not to excees 60% of the users budget for the mothly meal cost total.
-
+      Be sure to stick to these preferences strictly:: ${JSON.stringify(preferences)}
+      This is being turned into a monthly meal plan so make sure that this meal doesn't exceed about 2.5% of the user's monthly budget.
       Return ONLY valid JSON in this exact format:
       {
         "name": "${mealName}",
