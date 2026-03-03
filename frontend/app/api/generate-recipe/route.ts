@@ -38,8 +38,8 @@ export async function POST(request: Request) {
 
       Budget rule: The total monthly cost of all meals must not exceed 60% of $${preferences.monthlyBudget}.
 
-      make sure to be thurogh in the instruction steps, and include tips that are relevant to the recipe.
-      also make sure not to forget seasonioongs and spices, as those are often the most missed items in meal planning.
+      Make sure to be thorough in the instruction steps, and include tips that are relevant to the recipe.
+      Additonally make sure not to forget seasonings and spices, as those are often the most missed items in meal planning.
 
       Return ONLY valid JSON in this exact format:
       {
