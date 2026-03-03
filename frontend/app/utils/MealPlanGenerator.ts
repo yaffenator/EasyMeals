@@ -11,6 +11,7 @@ export interface Recipe {
   servings: number;
   calories: number;
   category: string;
+  status?: "pending" | "completed";
 }
 
 export interface WeeklyPlan {

@@ -1,0 +1,192 @@
+{
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Lemon Herb Roasted Chicken",
+          "description": "Juicy chicken thighs roasted with fresh lemon, rosemary, and seasonal root vegetables.",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Beef and Broccoli Stir-fry",
+          "description": "Tender strips of beef and crisp broccoli florets tossed in a ginger-soy sauce over brown rice.",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Spaghetti Bolognese",
+          "description": "Classic pasta topped with a hearty meat sauce made from ground beef, tomatoes, and herbs.",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Sheet Pan Sausage and Veggies",
+          "description": "Roasted Italian sausages with bell peppers, onions, and zucchini drizzled in olive oil.",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Baked Cod with Lemon",
+          "description": "Flaky white fish seasoned with garlic and lemon, served alongside steamed green beans.",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Classic Turkey Chili",
+          "description": "A protein-rich bowl of ground turkey, kidney beans, and diced tomatoes with mild spices.",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Garden Vegetable Frittata",
+          "description": "Fluffy baked eggs packed with spinach, mushrooms, and a touch of cheddar cheese.",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Chicken Alfredo Pasta",
+          "description": "Grilled chicken breast slices over fettuccine in a light, creamy garlic sauce.",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Ground Beef Tacos",
+          "description": "Soft corn tortillas filled with seasoned beef, shredded lettuce, and fresh salsa.",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Lentil and Vegetable Soup",
+          "description": "A nutrient-dense soup featuring brown lentils, carrots, and celery in a savory broth.",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Pesto Grilled Chicken",
+          "description": "Chicken breast marinated in basil pesto and served with a side of quinoa.",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Garlic Butter Shrimp Scampi",
+          "description": "Shrimp sautéed in garlic, butter, and white wine served over whole-wheat linguine.",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Homemade Pepperoni Pizza",
+          "description": "Whole grain crust topped with tomato sauce, mozzarella, and turkey pepperoni.",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Slow-Cooker Pot Roast",
+          "description": "Tender beef chuck roast slow-cooked with potatoes, carrots, and onions.",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "weekNumber": 3,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "Teriyaki Chicken Bowls",
+          "description": "Grilled chicken glazed in teriyaki sauce with steamed broccoli over white rice.",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Black Bean Quesadillas",
+          "description": "Toasted tortillas filled with seasoned black beans, corn, and melted jack cheese.",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Turkey Meatballs and Ziti",
+          "description": "Baked turkey meatballs served with baked ziti in a marinara sauce.",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Garlic Butter Steak Bites",
+          "description": "Seared sirloin steak pieces finished with garlic butter and served with mashed cauliflower.",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Tuna Melt Sandwiches",
+          "description": "Open-faced tuna salad sandwiches on whole grain bread topped with melted provolone.",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Mild Chicken Curry",
+          "description": "Cubed chicken breast simmered in a coconut milk curry sauce with peas and carrots.",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Spinach and Mushroom Quiche",
+          "description": "A crustless egg bake filled with sautéed spinach, mushrooms, and onions.",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "weekNumber": 4,
+      "meals": [
+        {
+          "day": "Monday",
+          "name": "BBQ Pulled Chicken Sandwiches",
+          "description": "Shredded chicken in tangy BBQ sauce served on whole wheat buns with coleslaw.",
+          "status": "pending"
+        },
+        {
+          "day": "Tuesday",
+          "name": "Chicken Caesar Salad",
+          "description": "Crisp romaine lettuce topped with grilled chicken, parmesan, and light Caesar dressing.",
+          "status": "pending"
+        },
+        {
+          "day": "Wednesday",
+          "name": "Hearty Beef Stew",
+          "description": "Chunks of beef simmered with potatoes, peas, and carrots in a rich brown gravy.",
+          "status": "pending"
+        },
+        {
+          "day": "Thursday",
+          "name": "Sweet Potato and Black Bean Tacos",
+          "description": "Roasted sweet potato cubes and black beans with lime-cilantro crema.",
+          "status": "pending"
+        },
+        {
+          "day": "Friday",
+          "name": "Pan-Seared Tilapia",
+          "description": "Lightly seasoned tilapia fillets served with a side of wild rice and asparagus.",
+          "status": "pending"
+        },
+        {
+          "day": "Saturday",
+          "name": "Traditional Shepherd's Pie",
+          "description": "Ground beef and mixed vegetables topped with a layer of creamy mashed potatoes.",
+          "status": "pending"
+        },
+        {
+          "day": "Sunday",
+          "name": "Roast Chicken with Root Veggies",
+          "description": "A classic Sunday roast featuring a whole chicken and herb-crusted parsnips and carrots.",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}
