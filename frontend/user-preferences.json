@@ -1,8 +1,12 @@
 {
   "questionnaireCompleted": true,
-  "monthlyBudget": 292,
-  "goal": "maintain",
-  "currentWeight": 155,
-  "allergies": [],
-  "excludedCuisines": []
+  "monthlyBudget": 298,
+  "goal": "lose",
+  "currentWeight": 164,
+  "allergies": [
+    "Peanuts"
+  ],
+  "excludedCuisines": [
+    "Spicy"
+  ]
 }
