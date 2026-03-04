@@ -132,3 +132,19 @@ def call_gemini(prompt: str, retries: int = 3) -> dict:
             print(f"Gemini attempt {attempt + 1} failed: {e}")
 
     raise ValueError(f"Gemini failed after {retries} attempts: {last_error}")
+
+def generate_meal_plan(preferences: dict) -> GeminiResponse:
+    """
+    Builds prompt, calls Gemini, validates response against
+    Pydantic schema. Raises ValueError if response is malformed.
+    """
+    prompt = build_prompt(preferences)
+    raw = call_gemini(prompt)
+
+    try:
+        return GeminiResponse(**raw)
+    except Exception as e:
+        raise ValueError(f"Gemini response failed Pydantic validation: {e}")
+    
+
+
