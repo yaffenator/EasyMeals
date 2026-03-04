@@ -1,8 +1,12 @@
-from pydantic import BaseModel
-from typing import Optional
-import google.generativeai as genai
-import os
 import json
+import os
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field
+
+GEMINI_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_RETRIES = 3
+
 
 class IngredientItem(BaseModel):
     ingredientId: str
@@ -10,6 +14,7 @@ class IngredientItem(BaseModel):
     quantity: float
     unit: str
     notes: str = ""
+
 
 class Meal(BaseModel):
     name: str
@@ -30,121 +35,149 @@ class Meal(BaseModel):
     tips: Optional[str] = None
     source: Optional[str] = "generated"
 
+
+class PriceMap(BaseModel):
+    value: float
+    currency: str = "USD"
+    unitQuantity: float = 1.0
+    unit: str
+
+
 class IngredientPrice(BaseModel):
     name: str
     category: str
-    avgPrice: float
-    unit: str
+    defaultUnit: str
+    price: PriceMap
+    snapEligible: bool = True
+    aliases: list[str] = Field(default_factory=list)
+
 
 class GeminiResponse(BaseModel):
     mealPlan: list[Meal]
     ingredientPrices: dict[str, IngredientPrice]
 
-def build_prompt(preferences: dict) -> str:
+
+def build_prompt(preferences: dict[str, Any]) -> str:
     return f"""
-You are a professional nutritionist and chef. Generate a monthly meal plan
-containing 28 meals total (breakfast, lunch, and dinner across 4 weeks,
-one representative day per week shown).
+You are a professional nutritionist and chef. Generate a 4-week meal plan.
 
 User preferences:
-- Monthly budget: ${preferences.get('monthlyBudget')}
-- Goal: {preferences.get('goalType')}
-- Dietary tags: {preferences.get('dietaryTags', [])}
-- Allergies (strictly exclude): {preferences.get('allergies', [])}
+- Monthly budget: ${preferences.get("monthlyBudget")}
+- Goal: {preferences.get("goalType")}
+- Dietary tags: {preferences.get("dietaryTags", [])}
+- Allergies (strictly exclude): {preferences.get("allergies", [])}
 
 Rules:
-- Each meal must not exceed 2.5% of the monthly budget
-- Strictly exclude any allergens listed above
-- Vary meals across weeks to avoid repetition
-- Include a mix of breakfast, lunch, and dinner meals
+- Produce exactly 28 meals total across breakfast/lunch/dinner.
+- Strictly exclude allergens listed above.
+- Keep meals diverse across the month.
+- Include practical ingredient measurements.
+- Return only raw JSON with no markdown.
 
-Return ONLY valid JSON with this exact structure, no extra text:
+Return JSON with this exact top-level shape:
 {{
-    "mealPlan": [
+  "mealPlan": [
+    {{
+      "name": "meal name",
+      "calories": 500,
+      "carbs": 60,
+      "fat": 15,
+      "protein": 30,
+      "prepTime": "10 minutes",
+      "cookTime": "20 minutes",
+      "servings": 2,
+      "costPerServing": 2.5,
+      "mealType": "Breakfast",
+      "difficulty": "Easy",
+      "instructions": "Step-by-step instructions in one string.",
+      "tags": ["budget-friendly"],
+      "tips": "Optional helpful tip",
+      "source": "generated",
+      "ingredientItems": [
         {{
-            "name": "meal name",
-            "calories": 500,
-            "carbs": 60,
-            "fat": 15,
-            "protein": 30,
-            "prepTime": "10 minutes",
-            "cookTime": "20 minutes",
-            "servings": 2,
-            "costPerServing": 2.50,
-            "mealType": "Breakfast",
-            "difficulty": "Easy",
-            "instructions": "Step by step instructions as a single string",
-            "tags": ["budget-friendly"],
-            "tips": "A helpful tip",
-            "source": "generated",
-            "ingredientItems": [
-                {{
-                    "ingredientId": "ingredient_name",
-                    "originalText": "1 cup rolled oats",
-                    "quantity": 1,
-                    "unit": "cup",
-                    "notes": ""
-                }}
-            ],
-            "ingredients": ["Ingredient Name"]
+          "ingredientId": "ingredient_oats_grains",
+          "originalText": "1 cup rolled oats",
+          "quantity": 1,
+          "unit": "cup",
+          "notes": ""
         }}
-    ],
-    "ingredientPrices": {{
-        "ingredient_id": {{
-            "name": "Ingredient Name",
-            "category": "Grains",
-            "avgPrice": 0.06,
-            "unit": "cup"
-        }}
+      ],
+      "ingredients": ["Rolled Oats"]
     }}
+  ],
+  "ingredientPrices": {{
+    "ingredient_oats_grains": {{
+      "name": "rolled oats",
+      "category": "grains",
+      "defaultUnit": "cup",
+      "snapEligible": true,
+      "aliases": ["oats"],
+      "price": {{
+        "value": 0.3,
+        "currency": "USD",
+        "unitQuantity": 1,
+        "unit": "cup"
+      }}
+    }}
+  }}
 }}
 """
 
-def call_gemini(prompt: str, retries: int = 3) -> dict:
-    """
-    Calls Gemini API with retry logic.
-    Strips markdown fences if present before parsing JSON.
-    Raises ValueError if all retries fail.
-    """
+
+def _extract_json_text(raw_text: str) -> str:
+    text = raw_text.strip()
+    if text.startswith("```"):
+        chunks = text.split("```")
+        for chunk in chunks:
+            candidate = chunk.strip()
+            if not candidate:
+                continue
+            if candidate.startswith("json"):
+                candidate = candidate[4:].strip()
+            if candidate.startswith("{"):
+                return candidate
+    return text
+
+
+def _generate_raw_response(prompt: str) -> str:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set in environment variables")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        "gemini-2.5-flash-lite",
-        generation_config={"response_mime_type": "application/json"}
-    )
+    from google import genai
+    from google.genai import types
 
-    last_error = None
-    for attempt in range(retries):
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.2,
+        ),
+    )
+    if not getattr(response, "text", None):
+        raise ValueError("Gemini returned an empty response body")
+    return response.text
+
+
+def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
+    last_error: Optional[Exception] = None
+
+    for attempt in range(1, retries + 1):
         try:
-            result = model.generate_content(prompt)
-            text = result.text.strip()
-            # Strip markdown fences if Gemini wraps response in ```json ... ```
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            return json.loads(text.strip())
-        except Exception as e:
-            last_error = e
-            print(f"Gemini attempt {attempt + 1} failed: {e}")
+            raw_text = _generate_raw_response(prompt)
+            json_text = _extract_json_text(raw_text)
+            payload = json.loads(json_text)
+            return GeminiResponse(**payload)
+        except Exception as exc:
+            last_error = exc
+            print(f"Gemini attempt {attempt}/{retries} failed: {exc}")
 
     raise ValueError(f"Gemini failed after {retries} attempts: {last_error}")
 
-def generate_meal_plan(preferences: dict) -> GeminiResponse:
-    """
-    Builds prompt, calls Gemini, validates response against
-    Pydantic schema. Raises ValueError if response is malformed.
-    """
+
+def generate_meal_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     prompt = build_prompt(preferences)
-    raw = call_gemini(prompt)
-
-    try:
-        return GeminiResponse(**raw)
-    except Exception as e:
-        raise ValueError(f"Gemini response failed Pydantic validation: {e}")
+    return call_gemini(prompt, retries=retries)
     
-
-
