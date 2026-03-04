@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 from typing import Optional
+import google.generativeai as genai
+import os
+import json
 
 class IngredientItem(BaseModel):
     ingredientId: str
@@ -96,3 +99,36 @@ Return ONLY valid JSON with this exact structure, no extra text:
     }}
 }}
 """
+
+def call_gemini(prompt: str, retries: int = 3) -> dict:
+    """
+    Calls Gemini API with retry logic.
+    Strips markdown fences if present before parsing JSON.
+    Raises ValueError if all retries fail.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not set in environment variables")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        "gemini-2.5-flash-lite",
+        generation_config={"response_mime_type": "application/json"}
+    )
+
+    last_error = None
+    for attempt in range(retries):
+        try:
+            result = model.generate_content(prompt)
+            text = result.text.strip()
+            # Strip markdown fences if Gemini wraps response in ```json ... ```
+            if text.startswith("```"):
+                text = text.split("```")[1]
+                if text.startswith("json"):
+                    text = text[4:]
+            return json.loads(text.strip())
+        except Exception as e:
+            last_error = e
+            print(f"Gemini attempt {attempt + 1} failed: {e}")
+
+    raise ValueError(f"Gemini failed after {retries} attempts: {last_error}")
