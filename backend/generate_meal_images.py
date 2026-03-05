@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Generate missing meal images for Firestore meal-plan docs.
+Generate missing meal images for Firestore user plan docs.
 
 Behavior:
-- Scans users/{uid}/mealPlan/*
+- Scans users/{uid}/plans/*
 - Generates image only if `image` is missing/empty/placeholder
 - Retries failed items automatically across multiple passes
 - Tracks generation fields on each meal doc:
@@ -154,10 +154,15 @@ def should_process_meal(
     return True
 
 
-def try_generate_for_doc(
+def try_generate_for_plan_meal(
+    db: firestore.Client,
     client: genai.Client,
     model: str,
-    meal_doc,
+    plan_ref,
+    weeks: list[dict],
+    week_index: int,
+    meal_index: int,
+    meal: dict,
     uid: str,
     public_dir: Path,
     attempts_per_meal: int,
@@ -165,64 +170,65 @@ def try_generate_for_doc(
     dry_run: bool,
 ) -> Tuple[bool, int]:
     """Returns (success, attempts_used)."""
-    meal_data = meal_doc.to_dict() or {}
-    meal_name = str(meal_data.get("name") or "Meal")
-    current_attempts = int(meal_data.get("imageGenAttempts") or 0)
+    meal_name = str(meal.get("name") or "Meal")
+    current_attempts = int(meal.get("imageGenAttempts") or 0)
+    meal_id = str(meal.get("id") or f"week{week_index}_meal{meal_index}")
 
     attempts_allowed = max(0, min(attempts_per_meal, max_attempts - current_attempts))
     if attempts_allowed <= 0:
         return False, 0
 
     slug = slugify(meal_name)
-    filename = f"{uid}_{meal_doc.id}_{slug}.png"
+    filename = f"{uid}_{plan_ref.id}_{slugify(meal_id)}_{slug}.png"
     out_path = public_dir / filename
     web_path = f"/meal-images/{filename}"
 
     if dry_run:
-        print(f"[DRY RUN] Would generate image for users/{uid}/mealPlan/{meal_doc.id} -> {web_path}")
+        print(
+            f"[DRY RUN] Would generate image for users/{uid}/plans/{plan_ref.id} "
+            f"(week={week_index}, meal={meal_index}) -> {web_path}"
+        )
         return True, 1
 
     last_error = ""
     for attempt_index in range(1, attempts_allowed + 1):
         total_attempt_num = current_attempts + attempt_index
         try:
-            meal_doc.reference.update(
-                {
-                    "imageGenStatus": "pending",
-                    "imageGenAttempts": total_attempt_num,
-                    "updatedAt": firestore.SERVER_TIMESTAMP,
-                }
-            )
+            weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "pending"
+            weeks[week_index]["meals"][meal_index]["imageGenAttempts"] = total_attempt_num
+            plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
 
             image_bytes = generate_image_bytes(client, model, meal_name)
             out_path.write_bytes(image_bytes)
 
-            meal_doc.reference.update(
-                {
-                    "image": web_path,
-                    "imageGenStatus": "success",
-                    "imageGenError": firestore.DELETE_FIELD,
-                    "updatedAt": firestore.SERVER_TIMESTAMP,
-                }
-            )
+            weeks[week_index]["meals"][meal_index]["image"] = web_path
+            weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "success"
+            weeks[week_index]["meals"][meal_index].pop("imageGenError", None)
+            plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
 
-            print(f"Generated image for users/{uid}/mealPlan/{meal_doc.id}: {web_path}")
+            if meal.get("id"):
+                db.collection("recipes").document(meal_id).set(
+                    {"image": web_path, "updatedAt": firestore.SERVER_TIMESTAMP},
+                    merge=True,
+                )
+
+            print(
+                f"Generated image for users/{uid}/plans/{plan_ref.id} "
+                f"(week={week_index}, meal={meal_index}): {web_path}"
+            )
             return True, attempt_index
         except Exception as exc:
             last_error = str(exc)
             print(
-                f"Attempt {total_attempt_num} failed for users/{uid}/mealPlan/{meal_doc.id} ({meal_name}): {last_error}",
+                f"Attempt {total_attempt_num} failed for users/{uid}/plans/{plan_ref.id} "
+                f"(week={week_index}, meal={meal_index}, name={meal_name}): {last_error}",
                 file=sys.stderr,
             )
             time.sleep(1.5)
 
-    meal_doc.reference.update(
-        {
-            "imageGenStatus": "failed",
-            "imageGenError": last_error[:500],
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-        }
-    )
+    weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "failed"
+    weeks[week_index]["meals"][meal_index]["imageGenError"] = last_error[:500]
+    plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
     return False, attempts_allowed
 
 
@@ -251,40 +257,50 @@ def run(
 
         for user_ref in iter_user_refs(db, user_id):
             uid = user_ref.id
-            meal_docs = list(user_ref.collection("mealPlan").stream())
+            plan_docs = list(user_ref.collection("plans").stream())
 
-            for meal_doc in meal_docs:
-                meal_data = meal_doc.to_dict() or {}
-                pass_checked += 1
-                checked_total += 1
+            for plan_doc in plan_docs:
+                plan_data = plan_doc.to_dict() or {}
+                weeks = plan_data.get("weeks") or []
 
-                if not should_process_meal(
-                    meal_data=meal_data,
-                    retry_failed=retry_failed,
-                    max_attempts=max_attempts,
-                ):
-                    continue
+                for week_index, week in enumerate(weeks):
+                    meals = week.get("meals") or []
+                    for meal_index, meal_data in enumerate(meals):
+                        pass_checked += 1
+                        checked_total += 1
 
-                if limit is not None and generated_total >= limit:
-                    print(f"Reached limit={limit}; stopping.")
-                    print(f"Checked {checked_total} meals, generated {generated_total} images.")
-                    return 0
+                        if not should_process_meal(
+                            meal_data=meal_data,
+                            retry_failed=retry_failed,
+                            max_attempts=max_attempts,
+                        ):
+                            continue
 
-                pass_attempted += 1
-                success, _attempts_used = try_generate_for_doc(
-                    client=client,
-                    model=model,
-                    meal_doc=meal_doc,
-                    uid=uid,
-                    public_dir=public_dir,
-                    attempts_per_meal=attempts_per_meal,
-                    max_attempts=max_attempts,
-                    dry_run=dry_run,
-                )
+                        if limit is not None and generated_total >= limit:
+                            print(f"Reached limit={limit}; stopping.")
+                            print(f"Checked {checked_total} meals, generated {generated_total} images.")
+                            return 0
 
-                if success:
-                    generated_total += 1
-                    pass_generated += 1
+                        pass_attempted += 1
+                        success, _attempts_used = try_generate_for_plan_meal(
+                            db=db,
+                            client=client,
+                            model=model,
+                            plan_ref=plan_doc.reference,
+                            weeks=weeks,
+                            week_index=week_index,
+                            meal_index=meal_index,
+                            meal=meal_data,
+                            uid=uid,
+                            public_dir=public_dir,
+                            attempts_per_meal=attempts_per_meal,
+                            max_attempts=max_attempts,
+                            dry_run=dry_run,
+                        )
+
+                        if success:
+                            generated_total += 1
+                            pass_generated += 1
 
         print(
             f"Pass {pass_num}/{passes}: checked {pass_checked} meals, attempted {pass_attempted}, generated {pass_generated} images."

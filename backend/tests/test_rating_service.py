@@ -75,15 +75,15 @@ def test_rate_meal_returns_updated_stats():
         "globalAvg": 3.5,
     }
 
-    mock_meals_ref = MagicMock()
-    mock_meals_ref.document.return_value.get.return_value = mock_meal_doc
+    mock_recipes_ref = MagicMock()
+    mock_recipes_ref.document.return_value.get.return_value = mock_meal_doc
 
     mock_meta_ref = MagicMock()
     mock_meta_ref.document.return_value.get.return_value = mock_stats_doc
 
     mock_db = MagicMock()
     mock_db.collection.side_effect = lambda name: {
-        "meals": mock_meals_ref,
+        "recipes": mock_recipes_ref,
         "meta": mock_meta_ref,
     }[name]
 
