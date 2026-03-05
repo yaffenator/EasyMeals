@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -47,6 +47,27 @@ def _serialize_firestore(value: Any) -> Any:
     return value
 
 
+def _created_at_sort_key(doc: Any) -> float:
+    created_at = (doc.to_dict() or {}).get("createdAt")
+    if created_at is None:
+        return 0.0
+    if isinstance(created_at, datetime):
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        return created_at.timestamp()
+    if hasattr(created_at, "timestamp"):
+        try:
+            return float(created_at.timestamp())
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+@app.get("/health")
+def health_check():
+    return {"ok": True, "service": "easymeals-backend"}
+
+
 @app.post("/api/generate-plan")
 def generate_plan(payload: PlanGenerationRequest):
     try:
@@ -82,11 +103,8 @@ def get_plan(user_id: str):
     if not plan_docs:
         raise HTTPException(status_code=404, detail=f"No plans found for user {user_id}.")
 
-    # Latest first by createdAt when available, fallback to first stream item.
-    plan_docs.sort(
-        key=lambda doc: (doc.to_dict() or {}).get("createdAt") or datetime.min,
-        reverse=True,
-    )
+    # Latest first by createdAt when available.
+    plan_docs.sort(key=_created_at_sort_key, reverse=True)
     latest_doc = plan_docs[0]
     latest_data = latest_doc.to_dict() or {}
 
