@@ -48,7 +48,7 @@ def _valid_gemini_payload():
     }
 
 
-def test_generate_and_store_plan_calls_gemini_and_maps_ingredients():
+def test_generate_and_store_plan_maps_ingredients_and_recalculates_costs():
     with patch("db.firestore_client.db", MagicMock()):
         from db.gemini_service import GeminiResponse
         from db.plan_service import PlanGenerationRequest, generate_and_store_plan
@@ -70,14 +70,22 @@ def test_generate_and_store_plan_calls_gemini_and_maps_ingredients():
                     "db.plan_service.get_or_create_ingredient",
                     return_value="ingredient_eggs_protein",
                 ) as mock_upsert:
-                    result = generate_and_store_plan(request)
+                    with patch(
+                        "db.plan_service.recalculate_meal_cost",
+                        return_value=3.75,
+                    ) as mock_recalculate:
+                        result = generate_and_store_plan(request)
 
-        assert result.status == "ingredients_mapped"
-        assert result.metadata["implementedStep"] == 3
+        assert result.status == "costs_recalculated"
+        assert result.metadata["implementedStep"] == 4
         assert result.metadata["mealCount"] == 1
         assert result.metadata["ingredientPriceCount"] == 1
         assert result.metadata["ingredientMappingCount"] == 1
         assert result.metadata["ingredientIdMap"]["ingredient_eggs_protein"] == "ingredient_eggs_protein"
+        assert result.metadata["recalculatedMealCount"] == 1
+        assert result.estimatedTotalCost == 3.75
+        assert len(result.weeks) == 1
+        assert result.weeks[0].meals[0]["costPerServing"] == 3.75
         mock_generate.assert_called_once()
         mock_upsert.assert_called_once_with(
             name="eggs",
@@ -88,6 +96,7 @@ def test_generate_and_store_plan_calls_gemini_and_maps_ingredients():
             snap_eligible=True,
             aliases=[],
         )
+        mock_recalculate.assert_called_once()
 
 
 def test_generate_and_store_plan_raises_if_db_not_initialized():
@@ -140,3 +149,25 @@ def test_generate_and_store_plan_wraps_ingredient_upsert_errors():
                 with patch("db.plan_service.get_or_create_ingredient", side_effect=ValueError("write failed")):
                     with pytest.raises(ValueError, match="Failed to upsert ingredient prices from Gemini response"):
                         generate_and_store_plan(request)
+
+
+def test_generate_and_store_plan_wraps_cost_recalculation_errors():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import GeminiResponse
+        from db.plan_service import PlanGenerationRequest, generate_and_store_plan
+
+        request = PlanGenerationRequest(
+            userId="user_1",
+            monthlyBudget=250.0,
+            goalType="maintain",
+        )
+
+        with patch("db.plan_service.db", MagicMock()):
+            with patch(
+                "db.plan_service.generate_meal_plan",
+                return_value=GeminiResponse(**_valid_gemini_payload()),
+            ):
+                with patch("db.plan_service.get_or_create_ingredient", return_value="ingredient_eggs_protein"):
+                    with patch("db.plan_service.recalculate_meal_cost", side_effect=ValueError("bad ingredient data")):
+                        with pytest.raises(ValueError, match="Failed to recalculate meal costs server-side"):
+                            generate_and_store_plan(request)
