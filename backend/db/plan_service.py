@@ -15,7 +15,7 @@ from db.ingredient_service import recalculate_meal_cost
 
 class PlanGenerationRequest(BaseModel):
     userId: str
-    monthlyBudget: float
+    monthlyBudget: float = Field(gt=0)
     goalType: str
     dietaryTags: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
@@ -356,6 +356,7 @@ def persist_user_plan(
     estimated_total_cost: float,
 ) -> None:
     plan_ref = db.collection("users").document(user_id).collection("plans").document(plan_id)
+    weeks_payload = [week.model_dump() for week in weeks]
     plan_payload = {
         "monthlyBudget": request.monthlyBudget,
         "goalType": request.goalType,
@@ -363,12 +364,34 @@ def persist_user_plan(
         "allergies": request.allergies,
         "estimatedTotalCost": estimated_total_cost,
         "status": "ready",
-        "weeks": [week.model_dump() for week in weeks],
+        "weeks": weeks_payload,
         "groceryList": [item.model_dump() for item in grocery_list],
         "createdAt": fs.SERVER_TIMESTAMP,
         "updatedAt": fs.SERVER_TIMESTAMP,
     }
     plan_ref.set(plan_payload)
+
+    # Hardening: persist a day-level view so consumers can query by day without parsing weeks.
+    day_counter = 0
+    for week in weeks_payload:
+        week_index = int(week.get("weekIndex", 0))
+        for meal in week.get("meals", []):
+            day_counter += 1
+            day_doc_id = f"day_{day_counter:02d}"
+            plan_ref.collection("days").document(day_doc_id).set(
+                {
+                    "dayIndex": day_counter,
+                    "weekIndex": week_index,
+                    "mealId": meal.get("id"),
+                    "name": meal.get("name"),
+                    "mealType": meal.get("mealType"),
+                    "costPerServing": meal.get("costPerServing"),
+                    "calories": meal.get("calories"),
+                    "recipeRef": meal.get("recipeRef"),
+                    "createdAt": fs.SERVER_TIMESTAMP,
+                    "updatedAt": fs.SERVER_TIMESTAMP,
+                }
+            )
 
 
 def append_meal_history(user_id: str, plan_id: str, meals: list[dict[str, Any]]) -> int:
