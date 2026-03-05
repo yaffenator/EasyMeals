@@ -548,13 +548,56 @@ def test_recalculate_meal_costs_reconciles_by_normalized_ingredient_name():
         ]
         ingredient_id_map = {"ingredient_eggs_protein": "ingredient_eggs_protein"}
         ingredient_name_map = {"eggs": "ingredient_eggs_protein"}
+        price_hint_map = {}
 
         with patch("db.plan_service.recalculate_meal_cost", return_value=1.2):
-            processed, total = recalculate_meal_costs(meals, ingredient_id_map, ingredient_name_map)
+            with patch("db.plan_service._ingredient_exists", return_value=True):
+                processed, total = recalculate_meal_costs(
+                    meals,
+                    ingredient_id_map,
+                    ingredient_name_map,
+                    price_hint_map,
+                )
 
         assert processed[0]["ingredientItems"][0]["ingredientId"] == "ingredient_eggs_protein"
         assert processed[0]["costPerServing"] == 1.2
         assert total == 1.2
+
+
+def test_recalculate_meal_costs_auto_creates_missing_ingredient_doc():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import recalculate_meal_costs
+
+        meals = [
+            {
+                "name": "Potato Mash",
+                "ingredientItems": [
+                    {
+                        "ingredientId": "ingredient_potatoes_vegetable",
+                        "originalText": "2 cups potatoes",
+                        "quantity": 2,
+                        "unit": "cup",
+                    }
+                ],
+            }
+        ]
+        ingredient_id_map = {}
+        ingredient_name_map = {}
+        price_hint_map = {}
+
+        with patch("db.plan_service._ingredient_exists", return_value=False):
+            with patch("db.plan_service.get_or_create_ingredient", return_value="ingredient_potatoes_uncategorized"):
+                with patch("db.plan_service.recalculate_meal_cost", return_value=4.0):
+                    processed, total = recalculate_meal_costs(
+                        meals,
+                        ingredient_id_map,
+                        ingredient_name_map,
+                        price_hint_map,
+                    )
+
+        assert processed[0]["ingredientItems"][0]["ingredientId"] == "ingredient_potatoes_uncategorized"
+        assert processed[0]["costPerServing"] == 4.0
+        assert total == 4.0
 
 
 def test_generate_and_store_plan_wraps_meal_history_errors():

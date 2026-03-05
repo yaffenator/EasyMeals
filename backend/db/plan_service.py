@@ -12,6 +12,7 @@ from db.diversity_service import compute_final_scores
 from db.gemini_service import generate_meal_plan
 from db.ingredient_service import get_or_create_ingredient
 from db.ingredient_service import normalize_name
+from db.ingredient_service import normalize_unit
 from db.ingredient_service import recalculate_meal_cost
 
 
@@ -102,6 +103,21 @@ def build_normalized_name_map(ingredient_prices: dict[str, Any], ingredient_id_m
     return normalized_name_map
 
 
+def build_price_hint_map(ingredient_prices: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    hints: dict[str, dict[str, Any]] = {}
+    for ingredient_price in ingredient_prices.values():
+        normalized = normalize_name(ingredient_price.name)
+        hints[normalized] = {
+            "category": ingredient_price.category,
+            "price_value": ingredient_price.price.value,
+            "price_unit": ingredient_price.price.unit,
+            "default_unit": ingredient_price.defaultUnit,
+            "snap_eligible": ingredient_price.snapEligible,
+            "aliases": list(ingredient_price.aliases),
+        }
+    return hints
+
+
 def _meal_to_dict(meal: Any) -> dict[str, Any]:
     if hasattr(meal, "model_dump"):
         return meal.model_dump()
@@ -148,10 +164,66 @@ def _candidate_normalized_names(item: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(candidates))
 
 
+def _extract_category_from_ingredient_id(ingredient_id: str) -> str:
+    if not ingredient_id.startswith("ingredient_"):
+        return "uncategorized"
+    parts = ingredient_id.split("_")
+    return parts[-1] if len(parts) >= 3 else "uncategorized"
+
+
+def _ingredient_exists(ingredient_id: str) -> bool:
+    if not ingredient_id:
+        return False
+    return db.collection("ingredients").document(ingredient_id).get().exists
+
+
+def _heal_missing_ingredient_id(
+    item: dict[str, Any],
+    ingredient_name_map: dict[str, str],
+    price_hint_map: dict[str, dict[str, Any]],
+) -> None:
+    ingredient_id = item.get("ingredientId")
+    if ingredient_id and _ingredient_exists(ingredient_id):
+        return
+
+    candidates = _candidate_normalized_names(item)
+
+    for candidate_name in candidates:
+        mapped = ingredient_name_map.get(candidate_name)
+        if mapped and _ingredient_exists(mapped):
+            item["ingredientId"] = mapped
+            return
+
+    best_name = next((c for c in candidates if c), None)
+    if not best_name:
+        best_name = normalize_name(str(ingredient_id or "unknown ingredient"))
+
+    hint = price_hint_map.get(best_name, {})
+    category = hint.get("category") or _extract_category_from_ingredient_id(str(ingredient_id or ""))
+    unit_from_item = normalize_unit(str(item.get("unit") or "piece"))
+    default_unit = hint.get("default_unit") or unit_from_item
+    price_unit = hint.get("price_unit") or default_unit
+    price_value = float(hint.get("price_value", 1.0))
+    snap_eligible = bool(hint.get("snap_eligible", True))
+    aliases = list(hint.get("aliases", []))
+
+    healed_id = get_or_create_ingredient(
+        name=best_name,
+        default_unit=default_unit,
+        price_value=price_value,
+        price_unit=price_unit,
+        category=category,
+        snap_eligible=snap_eligible,
+        aliases=aliases,
+    )
+    item["ingredientId"] = healed_id
+
+
 def recalculate_meal_costs(
     meals: list[Any],
     ingredient_id_map: dict[str, str],
     ingredient_name_map: dict[str, str],
+    price_hint_map: dict[str, dict[str, Any]],
 ) -> tuple[list[dict[str, Any]], float]:
     processed_meals: list[dict[str, Any]] = []
     total_estimated_cost = 0.0
@@ -171,6 +243,8 @@ def recalculate_meal_costs(
                 if mapped_id:
                     item["ingredientId"] = mapped_id
                     break
+
+            _heal_missing_ingredient_id(item, ingredient_name_map, price_hint_map)
 
         trusted_cost = recalculate_meal_cost(ingredient_items)
         meal_dict["costPerServing"] = trusted_cost
@@ -539,12 +613,14 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
         raise ValueError(f"Failed to upsert ingredient prices from Gemini response: {exc}") from exc
 
     ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
+    price_hint_map = build_price_hint_map(gemini_response.ingredientPrices)
 
     try:
         processed_meals, estimated_total_cost = recalculate_meal_costs(
             gemini_response.mealPlan,
             ingredient_id_map,
             ingredient_name_map,
+            price_hint_map,
         )
     except Exception as exc:
         raise ValueError(f"Failed to recalculate meal costs server-side: {exc}") from exc
