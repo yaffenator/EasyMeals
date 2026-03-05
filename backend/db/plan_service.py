@@ -306,6 +306,47 @@ def enforce_budget_with_swaps(
     }
 
 
+def aggregate_grocery_list(meals: list[dict[str, Any]]) -> list[GroceryListItem]:
+    aggregated: dict[tuple[str, str], dict[str, Any]] = {}
+
+    for meal in meals:
+        for item in meal.get("ingredientItems", []):
+            ingredient_id = item.get("ingredientId")
+            unit = item.get("unit")
+            quantity = item.get("quantity", 0)
+
+            if not ingredient_id or not unit:
+                continue
+
+            try:
+                quantity_value = float(quantity)
+            except (TypeError, ValueError):
+                continue
+
+            key = (ingredient_id, unit)
+            if key not in aggregated:
+                aggregated[key] = {
+                    "ingredientId": ingredient_id,
+                    "name": item.get("name") or item.get("originalText") or ingredient_id,
+                    "totalQuantity": 0.0,
+                    "unit": unit,
+                }
+
+            aggregated[key]["totalQuantity"] += quantity_value
+
+    grocery_items = [
+        GroceryListItem(
+            ingredientId=value["ingredientId"],
+            name=str(value["name"]),
+            totalQuantity=round(float(value["totalQuantity"]), 2),
+            unit=str(value["unit"]),
+        )
+        for value in aggregated.values()
+    ]
+
+    return sorted(grocery_items, key=lambda x: (x.name.lower(), x.ingredientId, x.unit))
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -367,6 +408,11 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to enforce monthly budget: {exc}") from exc
 
+    try:
+        grocery_list = aggregate_grocery_list(budgeted_meals)
+    except Exception as exc:
+        raise ValueError(f"Failed to aggregate grocery list: {exc}") from exc
+
     final_total_cost = _total_cost(budgeted_meals)
     weeks = chunk_meals_into_weeks(budgeted_meals)
 
@@ -378,9 +424,9 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
         monthlyBudget=request.monthlyBudget,
         estimatedTotalCost=final_total_cost,
         weeks=weeks,
-        groceryList=[],
+        groceryList=grocery_list,
         metadata={
-            "implementedStep": 7,
+            "implementedStep": 8,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
@@ -395,6 +441,7 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             "budgetMealsDropped": budget_stats["mealsDropped"],
             "budgetMet": budget_stats["budgetMet"],
             "preBudgetEstimatedTotalCost": estimated_total_cost,
+            "groceryItemCount": len(grocery_list),
             "todoFlow": TODO_FLOW,
         },
     )
