@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from google.cloud import firestore as fs
 
 from db.firestore_client import db
+from db.diversity_service import compute_final_scores
 from db.gemini_service import generate_meal_plan
 from db.ingredient_service import get_or_create_ingredient
 from db.ingredient_service import recalculate_meal_cost
@@ -191,6 +192,44 @@ def dedupe_or_create_recipes(processed_meals: list[dict[str, Any]]) -> tuple[lis
     return deduped_meals, {"recipesCreated": created_count, "recipesReused": reused_count}
 
 
+def apply_diversity_selection(
+    user_id: str,
+    deduped_meals: list[dict[str, Any]],
+    target_count: int,
+) -> tuple[list[dict[str, Any]], dict[str, int | float]]:
+    candidates = [
+        {
+            "mealId": meal["id"],
+            "recommendationScore": meal.get("recommendationScore", 0.0),
+            "costPerServing": meal.get("costPerServing", 0.0),
+        }
+        for meal in deduped_meals
+        if meal.get("id")
+    ]
+
+    scored = compute_final_scores(user_id, candidates)
+    score_by_id = {entry["mealId"]: entry for entry in scored}
+
+    enriched = []
+    for meal in deduped_meals:
+        score = score_by_id.get(meal.get("id"), {})
+        enriched.append(
+            {
+                **meal,
+                "diversityWeight": score.get("diversityWeight", 1.0),
+                "finalScore": score.get("finalScore", meal.get("recommendationScore", 0.0)),
+            }
+        )
+
+    selected = sorted(
+        enriched,
+        key=lambda meal: (meal.get("finalScore", 0.0), meal.get("recommendationScore", 0.0)),
+        reverse=True,
+    )[: min(target_count, len(enriched))]
+
+    return selected, {"scoredCount": len(scored), "selectedCount": len(selected)}
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -234,19 +273,28 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to deduplicate or create recipes: {exc}") from exc
 
-    weeks = chunk_meals_into_weeks(deduped_meals)
+    try:
+        selected_meals, diversity_stats = apply_diversity_selection(
+            user_id=request.userId,
+            deduped_meals=deduped_meals,
+            target_count=len(deduped_meals),
+        )
+    except Exception as exc:
+        raise ValueError(f"Failed to apply diversity scoring: {exc}") from exc
+
+    weeks = chunk_meals_into_weeks(selected_meals)
 
     plan_id = f"plan_{uuid4().hex}"
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="recipes_deduped",
+        status="diversity_scored",
         monthlyBudget=request.monthlyBudget,
         estimatedTotalCost=estimated_total_cost,
         weeks=weeks,
         groceryList=[],
         metadata={
-            "implementedStep": 5,
+            "implementedStep": 6,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
@@ -254,6 +302,8 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             "recalculatedMealCount": len(processed_meals),
             "recipesCreated": recipe_stats["recipesCreated"],
             "recipesReused": recipe_stats["recipesReused"],
+            "diversityScoredCount": diversity_stats["scoredCount"],
+            "diversitySelectedCount": diversity_stats["selectedCount"],
             "todoFlow": TODO_FLOW,
         },
     )
