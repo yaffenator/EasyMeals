@@ -4,6 +4,7 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+from google.cloud import firestore as fs
 
 from db.firestore_client import db
 from db.gemini_service import generate_meal_plan
@@ -113,6 +114,83 @@ def chunk_meals_into_weeks(processed_meals: list[dict[str, Any]], chunk_size: in
     return weeks
 
 
+def normalize_recipe_name(name: str) -> str:
+    return " ".join(name.strip().lower().split())
+
+
+def build_recipe_doc_from_meal(meal: dict[str, Any]) -> dict[str, Any]:
+    recipe_name = meal.get("name", "Untitled Recipe")
+    return {
+        "name": recipe_name,
+        "normalizedName": normalize_recipe_name(recipe_name),
+        "calories": meal.get("calories", 0),
+        "carbs": meal.get("carbs", 0.0),
+        "fat": meal.get("fat", 0.0),
+        "protein": meal.get("protein", 0.0),
+        "prepTime": meal.get("prepTime", ""),
+        "cookTime": meal.get("cookTime", ""),
+        "servings": meal.get("servings", 1),
+        "costPerServing": meal.get("costPerServing", 0.0),
+        "mealType": meal.get("mealType", ""),
+        "difficulty": meal.get("difficulty", ""),
+        "instructions": meal.get("instructions", ""),
+        "tags": meal.get("tags", []),
+        "ingredientItems": meal.get("ingredientItems", []),
+        "ingredients": meal.get("ingredients", []),
+        "tips": meal.get("tips"),
+        "source": meal.get("source", "generated"),
+        "ratingCount": 0,
+        "ratingSum": 0.0,
+        "ratingAvg": 0.0,
+        "recommendationScore": 0.0,
+        "createdAt": fs.SERVER_TIMESTAMP,
+        "updatedAt": fs.SERVER_TIMESTAMP,
+    }
+
+
+def dedupe_or_create_recipes(processed_meals: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    recipes_ref = db.collection("recipes")
+    deduped_meals: list[dict[str, Any]] = []
+    created_count = 0
+    reused_count = 0
+
+    for meal in processed_meals:
+        recipe_name = meal.get("name", "")
+        normalized_name = normalize_recipe_name(recipe_name)
+        existing_doc = None
+
+        normalized_matches = list(recipes_ref.where("normalizedName", "==", normalized_name).limit(1).stream())
+        if normalized_matches:
+            existing_doc = normalized_matches[0]
+        else:
+            exact_matches = list(recipes_ref.where("name", "==", recipe_name).limit(1).stream())
+            if exact_matches:
+                existing_doc = exact_matches[0]
+
+        if existing_doc:
+            recipe_id = existing_doc.id
+            reused_count += 1
+            existing_doc.reference.set(
+                {"normalizedName": normalized_name, "updatedAt": fs.SERVER_TIMESTAMP},
+                merge=True,
+            )
+        else:
+            recipe_id = f"recipe_{uuid4().hex}"
+            recipe_doc = build_recipe_doc_from_meal(meal)
+            recipes_ref.document(recipe_id).set(recipe_doc)
+            created_count += 1
+
+        deduped_meals.append(
+            {
+                **meal,
+                "id": recipe_id,
+                "recipeRef": recipes_ref.document(recipe_id),
+            }
+        )
+
+    return deduped_meals, {"recipesCreated": created_count, "recipesReused": reused_count}
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -151,24 +229,31 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to recalculate meal costs server-side: {exc}") from exc
 
-    weeks = chunk_meals_into_weeks(processed_meals)
+    try:
+        deduped_meals, recipe_stats = dedupe_or_create_recipes(processed_meals)
+    except Exception as exc:
+        raise ValueError(f"Failed to deduplicate or create recipes: {exc}") from exc
+
+    weeks = chunk_meals_into_weeks(deduped_meals)
 
     plan_id = f"plan_{uuid4().hex}"
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="costs_recalculated",
+        status="recipes_deduped",
         monthlyBudget=request.monthlyBudget,
         estimatedTotalCost=estimated_total_cost,
         weeks=weeks,
         groceryList=[],
         metadata={
-            "implementedStep": 4,
+            "implementedStep": 5,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
             "ingredientIdMap": ingredient_id_map,
             "recalculatedMealCount": len(processed_meals),
+            "recipesCreated": recipe_stats["recipesCreated"],
+            "recipesReused": recipe_stats["recipesReused"],
             "todoFlow": TODO_FLOW,
         },
     )
