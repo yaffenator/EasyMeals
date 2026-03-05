@@ -11,7 +11,7 @@ Optional flags:
 - Delete one specific user tree first:
   `python db/clear_db.py --user-id test_user_1`
 
-By default, the script now creates `__keepalive__` in each cleared top-level
+By default, the script now creates `_keepalive` in each cleared top-level
 collection so collections remain visible in Firestore console.
 
 Credentials lookup order:

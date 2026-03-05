@@ -12,7 +12,7 @@ from firebase_admin import credentials, firestore
 
 
 DEFAULT_COLLECTIONS = ("users", "recipes", "ingredients", "meta")
-SENTINEL_DOC_ID = "__keepalive__"
+SENTINEL_DOC_ID = "_keepalive"
 
 
 def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
