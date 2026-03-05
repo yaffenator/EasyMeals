@@ -429,7 +429,25 @@ def persist_user_plan(
     grocery_list: list[GroceryListItem],
     estimated_total_cost: float,
 ) -> None:
-    plan_ref = db.collection("users").document(user_id).collection("plans").document(plan_id)
+    user_ref = db.collection("users").document(user_id)
+    user_ref.set(
+        {
+            "uid": user_id,
+            "mealPlanProfile": {
+                "questionnaireCompleted": True,
+                "allergies": request.allergies,
+                "goal": request.goalType,
+                "monthlyBudget": request.monthlyBudget,
+                "version": 1,
+                "updatedAt": fs.SERVER_TIMESTAMP,
+            },
+            "updatedAt": fs.SERVER_TIMESTAMP,
+            "createdAt": fs.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
+
+    plan_ref = user_ref.collection("plans").document(plan_id)
     weeks_payload = [week.model_dump() for week in weeks]
     plan_payload = {
         "monthlyBudget": request.monthlyBudget,
