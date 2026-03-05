@@ -230,6 +230,82 @@ def apply_diversity_selection(
     return selected, {"scoredCount": len(scored), "selectedCount": len(selected)}
 
 
+def _total_cost(meals: list[dict[str, Any]]) -> float:
+    return round(sum(float(meal.get("costPerServing", 0.0)) for meal in meals), 2)
+
+
+def enforce_budget_with_swaps(
+    selected_meals: list[dict[str, Any]],
+    candidate_pool: list[dict[str, Any]],
+    monthly_budget: float,
+) -> tuple[list[dict[str, Any]], dict[str, int | float | bool]]:
+    current = list(selected_meals)
+    total = _total_cost(current)
+
+    if total <= monthly_budget:
+        return current, {
+            "budgetExceededInitially": False,
+            "swapsApplied": 0,
+            "mealsDropped": 0,
+            "finalTotalCost": total,
+            "budgetMet": True,
+        }
+
+    swaps_applied = 0
+    dropped = 0
+
+    # First pass: swap expensive meals with cheaper alternatives not already selected.
+    selected_ids = {meal.get("id") for meal in current if meal.get("id")}
+    candidates_by_price = sorted(candidate_pool, key=lambda m: float(m.get("costPerServing", 0.0)))
+
+    while total > monthly_budget:
+        current_sorted = sorted(current, key=lambda m: float(m.get("costPerServing", 0.0)), reverse=True)
+        if not current_sorted:
+            break
+
+        expensive = current_sorted[0]
+        expensive_cost = float(expensive.get("costPerServing", 0.0))
+
+        replacement = None
+        for candidate in candidates_by_price:
+            candidate_id = candidate.get("id")
+            candidate_cost = float(candidate.get("costPerServing", 0.0))
+            if candidate_id in selected_ids:
+                continue
+            if candidate_cost < expensive_cost:
+                replacement = candidate
+                break
+
+        if replacement is None:
+            break
+
+        current.remove(expensive)
+        current.append(replacement)
+        if expensive.get("id"):
+            selected_ids.discard(expensive.get("id"))
+        if replacement.get("id"):
+            selected_ids.add(replacement.get("id"))
+        swaps_applied += 1
+        total = _total_cost(current)
+
+    # Fallback: drop highest-cost meals until budget is met (or nothing remains).
+    while total > monthly_budget and current:
+        current.sort(key=lambda m: float(m.get("costPerServing", 0.0)), reverse=True)
+        removed = current.pop(0)
+        if removed.get("id"):
+            selected_ids.discard(removed.get("id"))
+        dropped += 1
+        total = _total_cost(current)
+
+    return current, {
+        "budgetExceededInitially": True,
+        "swapsApplied": swaps_applied,
+        "mealsDropped": dropped,
+        "finalTotalCost": total,
+        "budgetMet": total <= monthly_budget,
+    }
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -282,19 +358,29 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to apply diversity scoring: {exc}") from exc
 
-    weeks = chunk_meals_into_weeks(selected_meals)
+    try:
+        budgeted_meals, budget_stats = enforce_budget_with_swaps(
+            selected_meals=selected_meals,
+            candidate_pool=deduped_meals,
+            monthly_budget=request.monthlyBudget,
+        )
+    except Exception as exc:
+        raise ValueError(f"Failed to enforce monthly budget: {exc}") from exc
+
+    final_total_cost = _total_cost(budgeted_meals)
+    weeks = chunk_meals_into_weeks(budgeted_meals)
 
     plan_id = f"plan_{uuid4().hex}"
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="diversity_scored",
+        status="budget_enforced",
         monthlyBudget=request.monthlyBudget,
-        estimatedTotalCost=estimated_total_cost,
+        estimatedTotalCost=final_total_cost,
         weeks=weeks,
         groceryList=[],
         metadata={
-            "implementedStep": 6,
+            "implementedStep": 7,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
@@ -304,6 +390,11 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             "recipesReused": recipe_stats["recipesReused"],
             "diversityScoredCount": diversity_stats["scoredCount"],
             "diversitySelectedCount": diversity_stats["selectedCount"],
+            "budgetExceededInitially": budget_stats["budgetExceededInitially"],
+            "budgetSwapsApplied": budget_stats["swapsApplied"],
+            "budgetMealsDropped": budget_stats["mealsDropped"],
+            "budgetMet": budget_stats["budgetMet"],
+            "preBudgetEstimatedTotalCost": estimated_total_cost,
             "todoFlow": TODO_FLOW,
         },
     )
