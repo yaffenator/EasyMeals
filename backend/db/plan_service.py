@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from db.firestore_client import db
 from db.gemini_service import generate_meal_plan
+from db.ingredient_service import get_or_create_ingredient
 
 
 class PlanGenerationRequest(BaseModel):
@@ -52,6 +53,24 @@ TODO_FLOW = [
 ]
 
 
+def upsert_ingredient_prices(ingredient_prices: dict[str, Any]) -> dict[str, str]:
+    ingredient_id_map: dict[str, str] = {}
+
+    for source_key, ingredient_price in ingredient_prices.items():
+        ingredient_id = get_or_create_ingredient(
+            name=ingredient_price.name,
+            default_unit=ingredient_price.defaultUnit,
+            price_value=ingredient_price.price.value,
+            price_unit=ingredient_price.price.unit,
+            category=ingredient_price.category,
+            snap_eligible=ingredient_price.snapEligible,
+            aliases=list(ingredient_price.aliases),
+        )
+        ingredient_id_map[source_key] = ingredient_id
+
+    return ingredient_id_map
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -77,19 +96,26 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to generate validated Gemini meal plan: {exc}") from exc
 
+    try:
+        ingredient_id_map = upsert_ingredient_prices(gemini_response.ingredientPrices)
+    except Exception as exc:
+        raise ValueError(f"Failed to upsert ingredient prices from Gemini response: {exc}") from exc
+
     plan_id = f"plan_{uuid4().hex}"
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="gemini_validated",
+        status="ingredients_mapped",
         monthlyBudget=request.monthlyBudget,
         estimatedTotalCost=0.0,
         weeks=[],
         groceryList=[],
         metadata={
-            "implementedStep": 2,
+            "implementedStep": 3,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
+            "ingredientMappingCount": len(ingredient_id_map),
+            "ingredientIdMap": ingredient_id_map,
             "todoFlow": TODO_FLOW,
         },
     )

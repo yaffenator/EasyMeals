@@ -48,7 +48,7 @@ def _valid_gemini_payload():
     }
 
 
-def test_generate_and_store_plan_calls_gemini_and_returns_step_2_stub():
+def test_generate_and_store_plan_calls_gemini_and_maps_ingredients():
     with patch("db.firestore_client.db", MagicMock()):
         from db.gemini_service import GeminiResponse
         from db.plan_service import PlanGenerationRequest, generate_and_store_plan
@@ -66,13 +66,28 @@ def test_generate_and_store_plan_calls_gemini_and_returns_step_2_stub():
                 "db.plan_service.generate_meal_plan",
                 return_value=GeminiResponse(**_valid_gemini_payload()),
             ) as mock_generate:
-                result = generate_and_store_plan(request)
+                with patch(
+                    "db.plan_service.get_or_create_ingredient",
+                    return_value="ingredient_eggs_protein",
+                ) as mock_upsert:
+                    result = generate_and_store_plan(request)
 
-        assert result.status == "gemini_validated"
-        assert result.metadata["implementedStep"] == 2
+        assert result.status == "ingredients_mapped"
+        assert result.metadata["implementedStep"] == 3
         assert result.metadata["mealCount"] == 1
         assert result.metadata["ingredientPriceCount"] == 1
+        assert result.metadata["ingredientMappingCount"] == 1
+        assert result.metadata["ingredientIdMap"]["ingredient_eggs_protein"] == "ingredient_eggs_protein"
         mock_generate.assert_called_once()
+        mock_upsert.assert_called_once_with(
+            name="eggs",
+            default_unit="piece",
+            price_value=0.4,
+            price_unit="piece",
+            category="protein",
+            snap_eligible=True,
+            aliases=[],
+        )
 
 
 def test_generate_and_store_plan_raises_if_db_not_initialized():
@@ -104,3 +119,24 @@ def test_generate_and_store_plan_wraps_gemini_errors():
             with patch("db.plan_service.generate_meal_plan", side_effect=ValueError("malformed response")):
                 with pytest.raises(ValueError, match="Failed to generate validated Gemini meal plan"):
                     generate_and_store_plan(request)
+
+
+def test_generate_and_store_plan_wraps_ingredient_upsert_errors():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import GeminiResponse
+        from db.plan_service import PlanGenerationRequest, generate_and_store_plan
+
+        request = PlanGenerationRequest(
+            userId="user_1",
+            monthlyBudget=250.0,
+            goalType="maintain",
+        )
+
+        with patch("db.plan_service.db", MagicMock()):
+            with patch(
+                "db.plan_service.generate_meal_plan",
+                return_value=GeminiResponse(**_valid_gemini_payload()),
+            ):
+                with patch("db.plan_service.get_or_create_ingredient", side_effect=ValueError("write failed")):
+                    with pytest.raises(ValueError, match="Failed to upsert ingredient prices from Gemini response"):
+                        generate_and_store_plan(request)
