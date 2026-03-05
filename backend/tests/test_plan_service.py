@@ -144,10 +144,12 @@ def test_generate_and_store_plan_enforces_budget_after_diversity():
                                         },
                                     ),
                                 ) as mock_budget:
-                                    result = generate_and_store_plan(request)
+                                    with patch("db.plan_service.persist_user_plan") as mock_persist_plan:
+                                        with patch("db.plan_service.append_meal_history", return_value=1) as mock_history:
+                                            result = generate_and_store_plan(request)
 
-        assert result.status == "budget_enforced"
-        assert result.metadata["implementedStep"] == 8
+        assert result.status == "stored"
+        assert result.metadata["implementedStep"] == 9
         assert result.metadata["mealCount"] == 1
         assert result.metadata["ingredientPriceCount"] == 1
         assert result.metadata["ingredientMappingCount"] == 1
@@ -163,6 +165,8 @@ def test_generate_and_store_plan_enforces_budget_after_diversity():
         assert result.metadata["budgetMet"] is True
         assert result.metadata["preBudgetEstimatedTotalCost"] == 3.75
         assert result.metadata["groceryItemCount"] == 1
+        assert result.metadata["mealHistoryAdded"] == 1
+        assert result.metadata["planPath"].startswith("users/user_1/plans/plan_")
         assert result.estimatedTotalCost == 3.25
         assert len(result.weeks) == 1
         assert result.weeks[0].meals[0]["id"] == "recipe_123"
@@ -186,6 +190,8 @@ def test_generate_and_store_plan_enforces_budget_after_diversity():
         mock_dedupe.assert_called_once()
         mock_diversity.assert_called_once()
         mock_budget.assert_called_once()
+        mock_persist_plan.assert_called_once()
+        mock_history.assert_called_once()
 
 
 def test_generate_and_store_plan_raises_if_db_not_initialized():
@@ -376,3 +382,76 @@ def test_generate_and_store_plan_wraps_grocery_aggregation_errors():
                                     with patch("db.plan_service.aggregate_grocery_list", side_effect=ValueError("aggregate failed")):
                                         with pytest.raises(ValueError, match="Failed to aggregate grocery list"):
                                             generate_and_store_plan(request)
+
+
+def test_generate_and_store_plan_wraps_plan_persistence_errors():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import GeminiResponse
+        from db.plan_service import PlanGenerationRequest, generate_and_store_plan
+
+        request = PlanGenerationRequest(
+            userId="user_1",
+            monthlyBudget=250.0,
+            goalType="maintain",
+        )
+
+        with patch("db.plan_service.db", MagicMock()):
+            with patch(
+                "db.plan_service.generate_meal_plan",
+                return_value=GeminiResponse(**_valid_gemini_payload()),
+            ):
+                with patch("db.plan_service.get_or_create_ingredient", return_value="ingredient_eggs_protein"):
+                    with patch("db.plan_service.recalculate_meal_cost", return_value=3.75):
+                        with patch(
+                            "db.plan_service.dedupe_or_create_recipes",
+                            return_value=([{"id": "recipe_123", "name": "Egg Scramble"}], {"recipesCreated": 0, "recipesReused": 1}),
+                        ):
+                            with patch(
+                                "db.plan_service.apply_diversity_selection",
+                                return_value=([{"id": "recipe_123", "name": "Egg Scramble", "costPerServing": 3.75}], {"scoredCount": 1, "selectedCount": 1}),
+                            ):
+                                with patch(
+                                    "db.plan_service.enforce_budget_with_swaps",
+                                    return_value=([{"id": "recipe_123", "name": "Egg Scramble", "costPerServing": 3.75}], {"budgetExceededInitially": False, "swapsApplied": 0, "mealsDropped": 0, "finalTotalCost": 3.75, "budgetMet": True}),
+                                ):
+                                    with patch("db.plan_service.aggregate_grocery_list", return_value=[]):
+                                        with patch("db.plan_service.persist_user_plan", side_effect=ValueError("write failed")):
+                                            with pytest.raises(ValueError, match="Failed to persist generated plan"):
+                                                generate_and_store_plan(request)
+
+
+def test_generate_and_store_plan_wraps_meal_history_errors():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import GeminiResponse
+        from db.plan_service import PlanGenerationRequest, generate_and_store_plan
+
+        request = PlanGenerationRequest(
+            userId="user_1",
+            monthlyBudget=250.0,
+            goalType="maintain",
+        )
+
+        with patch("db.plan_service.db", MagicMock()):
+            with patch(
+                "db.plan_service.generate_meal_plan",
+                return_value=GeminiResponse(**_valid_gemini_payload()),
+            ):
+                with patch("db.plan_service.get_or_create_ingredient", return_value="ingredient_eggs_protein"):
+                    with patch("db.plan_service.recalculate_meal_cost", return_value=3.75):
+                        with patch(
+                            "db.plan_service.dedupe_or_create_recipes",
+                            return_value=([{"id": "recipe_123", "name": "Egg Scramble"}], {"recipesCreated": 0, "recipesReused": 1}),
+                        ):
+                            with patch(
+                                "db.plan_service.apply_diversity_selection",
+                                return_value=([{"id": "recipe_123", "name": "Egg Scramble", "costPerServing": 3.75}], {"scoredCount": 1, "selectedCount": 1}),
+                            ):
+                                with patch(
+                                    "db.plan_service.enforce_budget_with_swaps",
+                                    return_value=([{"id": "recipe_123", "name": "Egg Scramble", "costPerServing": 3.75}], {"budgetExceededInitially": False, "swapsApplied": 0, "mealsDropped": 0, "finalTotalCost": 3.75, "budgetMet": True}),
+                                ):
+                                    with patch("db.plan_service.aggregate_grocery_list", return_value=[]):
+                                        with patch("db.plan_service.persist_user_plan"):
+                                            with patch("db.plan_service.append_meal_history", side_effect=ValueError("history failed")):
+                                                with pytest.raises(ValueError, match="Failed to append meal history"):
+                                                    generate_and_store_plan(request)
