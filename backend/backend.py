@@ -6,6 +6,9 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from db.firestore_client import db
 from db.plan_service import PlanGenerationRequest, generate_and_store_plan
