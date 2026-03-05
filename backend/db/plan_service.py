@@ -347,6 +347,52 @@ def aggregate_grocery_list(meals: list[dict[str, Any]]) -> list[GroceryListItem]
     return sorted(grocery_items, key=lambda x: (x.name.lower(), x.ingredientId, x.unit))
 
 
+def persist_user_plan(
+    user_id: str,
+    plan_id: str,
+    request: PlanGenerationRequest,
+    weeks: list[PlanWeek],
+    grocery_list: list[GroceryListItem],
+    estimated_total_cost: float,
+) -> None:
+    plan_ref = db.collection("users").document(user_id).collection("plans").document(plan_id)
+    plan_payload = {
+        "monthlyBudget": request.monthlyBudget,
+        "goalType": request.goalType,
+        "dietaryTags": request.dietaryTags,
+        "allergies": request.allergies,
+        "estimatedTotalCost": estimated_total_cost,
+        "status": "ready",
+        "weeks": [week.model_dump() for week in weeks],
+        "groceryList": [item.model_dump() for item in grocery_list],
+        "createdAt": fs.SERVER_TIMESTAMP,
+        "updatedAt": fs.SERVER_TIMESTAMP,
+    }
+    plan_ref.set(plan_payload)
+
+
+def append_meal_history(user_id: str, plan_id: str, meals: list[dict[str, Any]]) -> int:
+    history_ref = db.collection("users").document(user_id).collection("mealHistory")
+    created = 0
+
+    for meal in meals:
+        meal_id = meal.get("id")
+        if not meal_id:
+            continue
+        history_ref.add(
+            {
+                "mealId": meal_id,
+                "planId": plan_id,
+                "mealName": meal.get("name"),
+                "eatenAt": fs.SERVER_TIMESTAMP,
+                "createdAt": fs.SERVER_TIMESTAMP,
+            }
+        )
+        created += 1
+
+    return created
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -417,16 +463,37 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     weeks = chunk_meals_into_weeks(budgeted_meals)
 
     plan_id = f"plan_{uuid4().hex}"
+    try:
+        persist_user_plan(
+            user_id=request.userId,
+            plan_id=plan_id,
+            request=request,
+            weeks=weeks,
+            grocery_list=grocery_list,
+            estimated_total_cost=final_total_cost,
+        )
+    except Exception as exc:
+        raise ValueError(f"Failed to persist generated plan: {exc}") from exc
+
+    try:
+        meal_history_added = append_meal_history(
+            user_id=request.userId,
+            plan_id=plan_id,
+            meals=budgeted_meals,
+        )
+    except Exception as exc:
+        raise ValueError(f"Failed to append meal history: {exc}") from exc
+
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="budget_enforced",
+        status="stored",
         monthlyBudget=request.monthlyBudget,
         estimatedTotalCost=final_total_cost,
         weeks=weeks,
         groceryList=grocery_list,
         metadata={
-            "implementedStep": 8,
+            "implementedStep": 9,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
@@ -442,6 +509,8 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             "budgetMet": budget_stats["budgetMet"],
             "preBudgetEstimatedTotalCost": estimated_total_cost,
             "groceryItemCount": len(grocery_list),
+            "mealHistoryAdded": meal_history_added,
+            "planPath": f"users/{request.userId}/plans/{plan_id}",
             "todoFlow": TODO_FLOW,
         },
     )
