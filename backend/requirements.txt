@@ -1,5 +1,7 @@
 firebase-admin
 google-cloud-firestore
+fastapi
+uvicorn
 pytest
 pytest-cov
 python-dotenv
