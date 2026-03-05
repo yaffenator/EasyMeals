@@ -60,6 +60,12 @@ def delete_collection(coll_ref, batch_size: int = 200) -> None:
         delete_collection(coll_ref, batch_size=batch_size)
 
 
+def delete_document_tree(doc_ref, batch_size: int = 200) -> None:
+    for sub in doc_ref.collections():
+        delete_collection(sub, batch_size=batch_size)
+    doc_ref.delete()
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Delete Firestore documents recursively.")
     parser.add_argument(
@@ -69,6 +75,13 @@ def parse_args() -> argparse.Namespace:
         help="Top-level collections to clear.",
     )
     parser.add_argument("--project", dest="project_id", default=None, help="Override Firebase project id.")
+    parser.add_argument(
+        "--user-id",
+        dest="user_ids",
+        nargs="+",
+        default=[],
+        help="Delete specific users/{uid} trees recursively.",
+    )
     return parser.parse_args()
 
 
@@ -76,6 +89,9 @@ def main() -> int:
     args = parse_args()
     try:
         db = init_firestore(project_id=args.project_id)
+        for user_id in args.user_ids:
+            delete_document_tree(db.collection("users").document(user_id))
+            print(f"deleted users/{user_id}")
         for collection_name in args.collections:
             delete_collection(db.collection(collection_name))
             print(f"deleted {collection_name}")

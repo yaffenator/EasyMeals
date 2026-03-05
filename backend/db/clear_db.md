@@ -8,6 +8,8 @@ Optional flags:
   `python db/clear_db.py --collections users recipes ingredients meta`
 - Project override:
   `python db/clear_db.py --project YOUR_PROJECT_ID`
+- Delete one specific user tree first:
+  `python db/clear_db.py --user-id test_user_1`
 
 Credentials lookup order:
 1) `GOOGLE_APPLICATION_CREDENTIALS`
