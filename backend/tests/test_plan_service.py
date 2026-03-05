@@ -420,6 +420,115 @@ def test_generate_and_store_plan_wraps_plan_persistence_errors():
                                                 generate_and_store_plan(request)
 
 
+def test_enforce_budget_with_swaps_keeps_selection_when_under_budget():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import enforce_budget_with_swaps
+
+        selected = [
+            {"id": "r1", "name": "A", "costPerServing": 2.0},
+            {"id": "r2", "name": "B", "costPerServing": 3.0},
+        ]
+        result, stats = enforce_budget_with_swaps(selected, selected, monthly_budget=10.0)
+
+        assert len(result) == 2
+        assert stats["budgetExceededInitially"] is False
+        assert stats["swapsApplied"] == 0
+        assert stats["mealsDropped"] == 0
+        assert stats["budgetMet"] is True
+        assert stats["finalTotalCost"] == 5.0
+
+
+def test_enforce_budget_with_swaps_replaces_expensive_meal_when_possible():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import enforce_budget_with_swaps
+
+        selected = [
+            {"id": "r_exp", "name": "Expensive", "costPerServing": 8.0},
+            {"id": "r_mid", "name": "Mid", "costPerServing": 4.0},
+        ]
+        pool = selected + [{"id": "r_cheap", "name": "Cheap", "costPerServing": 1.5}]
+
+        result, stats = enforce_budget_with_swaps(selected, pool, monthly_budget=9.0)
+        ids = {meal["id"] for meal in result}
+
+        assert "r_cheap" in ids
+        assert "r_exp" not in ids
+        assert stats["budgetExceededInitially"] is True
+        assert stats["swapsApplied"] == 1
+        assert stats["budgetMet"] is True
+        assert stats["finalTotalCost"] <= 9.0
+
+
+def test_enforce_budget_with_swaps_drops_meals_when_no_replacement_exists():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import enforce_budget_with_swaps
+
+        selected = [
+            {"id": "r1", "name": "A", "costPerServing": 7.0},
+            {"id": "r2", "name": "B", "costPerServing": 6.0},
+        ]
+
+        result, stats = enforce_budget_with_swaps(selected, selected, monthly_budget=5.0)
+
+        assert len(result) <= 1
+        assert stats["budgetExceededInitially"] is True
+        assert stats["swapsApplied"] == 0
+        assert stats["mealsDropped"] >= 1
+        assert stats["budgetMet"] is True
+        assert stats["finalTotalCost"] <= 5.0
+
+
+def test_aggregate_grocery_list_groups_by_ingredient_and_unit():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import aggregate_grocery_list
+
+        meals = [
+            {
+                "ingredientItems": [
+                    {"ingredientId": "ing_eggs", "originalText": "2 eggs", "quantity": 2, "unit": "piece"},
+                    {"ingredientId": "ing_milk", "originalText": "200 ml milk", "quantity": 200, "unit": "ml"},
+                ]
+            },
+            {
+                "ingredientItems": [
+                    {"ingredientId": "ing_eggs", "originalText": "1 egg", "quantity": 1, "unit": "piece"},
+                    {"ingredientId": "ing_milk", "originalText": "0.5 l milk", "quantity": 0.5, "unit": "l"},
+                ]
+            },
+        ]
+
+        result = aggregate_grocery_list(meals)
+        by_key = {(item.ingredientId, item.unit): item.totalQuantity for item in result}
+
+        assert by_key[("ing_eggs", "piece")] == 3.0
+        assert by_key[("ing_milk", "ml")] == 200.0
+        assert by_key[("ing_milk", "l")] == 0.5
+
+
+def test_apply_diversity_selection_sorts_by_final_score():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import apply_diversity_selection
+
+        deduped_meals = [
+            {"id": "r1", "name": "A", "recommendationScore": 1.0},
+            {"id": "r2", "name": "B", "recommendationScore": 1.0},
+        ]
+
+        scored_payload = [
+            {"mealId": "r1", "diversityWeight": 0.5, "finalScore": 0.5},
+            {"mealId": "r2", "diversityWeight": 0.9, "finalScore": 0.9},
+        ]
+
+        with patch("db.plan_service.compute_final_scores", return_value=scored_payload):
+            selected, stats = apply_diversity_selection("user_1", deduped_meals, target_count=1)
+
+        assert len(selected) == 1
+        assert selected[0]["id"] == "r2"
+        assert selected[0]["finalScore"] == 0.9
+        assert stats["scoredCount"] == 2
+        assert stats["selectedCount"] == 1
+
+
 def test_generate_and_store_plan_wraps_meal_history_errors():
     with patch("db.firestore_client.db", MagicMock()):
         from db.gemini_service import GeminiResponse
