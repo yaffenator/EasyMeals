@@ -18,6 +18,9 @@ import {
   collection,
   addDoc,
   getDocs,
+  query,
+  orderBy,
+  limit,
   deleteDoc,
 } from "firebase/firestore";
 
@@ -144,15 +147,30 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
 
   try {
     const userRef = doc(db, "users", uid);
+    const plansRef = collection(db, "users", uid, "plans");
+    const nowIso = new Date().toISOString();
     
-    // We save the entire object into one field called 'currentMealPlan'
-    // This makes 'Delete and Re-add' unnecessary and prevents duplication.
-    await updateDoc(userRef, {
-      currentMealPlan: {
-        ...mealPlan,
-        updatedAt: new Date().toISOString()
-      }
+    // Primary aligned write path: users/{uid}/plans/{planId}
+    await addDoc(plansRef, {
+      ...mealPlan,
+      status: mealPlan.status || "ready",
+      createdAt: nowIso,
+      updatedAt: nowIso,
     });
+
+    // Backward-compatible mirror to legacy field.
+    await setDoc(
+      userRef,
+      {
+        uid,
+        currentMealPlan: {
+          ...mealPlan,
+          updatedAt: nowIso,
+        },
+        updatedAt: nowIso,
+      },
+      { merge: true },
+    );
 
     console.log("Meal plan synced successfully.");
   } catch (error) {
@@ -165,11 +183,18 @@ export const loadMealPlanFromFirestore = async (uid) => {
   if (!uid) return null;
 
   try {
+    const plansRef = collection(db, "users", uid, "plans");
+    const latestPlanQuery = query(plansRef, orderBy("createdAt", "desc"), limit(1));
+    const planSnap = await getDocs(latestPlanQuery);
+
+    if (!planSnap.empty) {
+      return planSnap.docs[0].data();
+    }
+
+    // Backward-compatible fallback.
     const userSnap = await getDoc(doc(db, "users", uid));
-    
     if (userSnap.exists()) {
       const data = userSnap.data();
-      // Look for the single object we saved
       return data.currentMealPlan || null;
     }
     return null;
