@@ -10,7 +10,7 @@ Seeds Firestore with:
 - users/{uid}/plans/{planId}                       (standardized to 'plans' not 'mealPlans')
 
 Service account setup:
-1) Put `serviceAccountKey.json` next to this script, OR
+1) Put `serviceAccountKey.json` in `backend/secrets/`, OR
 2) Set GOOGLE_APPLICATION_CREDENTIALS to the full path to your JSON key.
 
 Run:
@@ -48,7 +48,10 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
 
     key_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
     script_dir = Path(__file__).resolve().parent
-    local_key_path = script_dir / "serviceAccountKey.json"
+    local_candidates = [
+        script_dir / "secrets" / "serviceAccountKey.json",
+        script_dir / "serviceAccountKey.json",
+    ]
 
     if key_path_env:
         p = Path(key_path_env)
@@ -57,13 +60,15 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
                 f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {p}"
             )
         cred_obj = credentials.Certificate(str(p))
-    elif local_key_path.exists():
-        cred_obj = credentials.Certificate(str(local_key_path))
     else:
-        raise FileNotFoundError(
-            "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
-            "serviceAccountKey.json next to seed_firestore.py."
-        )
+        local_key_path = next((p for p in local_candidates if p.exists()), None)
+        if local_key_path:
+            cred_obj = credentials.Certificate(str(local_key_path))
+        else:
+            raise FileNotFoundError(
+                "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
+                "serviceAccountKey.json in backend/secrets/."
+            )
 
     options: Dict[str, Any] = {}
     if project_id:
@@ -551,15 +556,15 @@ def build_ingredient_doc(canonical_name: str) -> Dict[str, Any]:
     return {
         "name": canonical_name,
         "aliases": [],
-        "category": None,
-        "defaultUnit": None,
-        "snapEligibleDefault": True,
+        "category": "uncategorized",
+        "defaultUnit": "piece",
+        "snapEligible": True,
         # Nested price map — matches ingredient_service.py's get_or_create_ingredient
         "price": {
-            "value": None,
+            "value": 1.0,
             "currency": "USD",
             "unitQuantity": 1,
-            "unit": None,
+            "unit": "piece",
         },
         "createdAt": now_ts(),
         "updatedAt": now_ts(),
@@ -647,13 +652,15 @@ def build_detailed_recipe_doc(
 
 def build_user_plan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dict[str, Any]:
     start = now_ts()
-    end = start + timedelta(days=14)
+    end = start + timedelta(days=28)
 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     slots = ["breakfast", "lunch", "dinner"]
 
     meals_all: List[Dict[str, Any]] = []
-    for i, rid in enumerate(recipe_ids):
+    # Build a full 4-week / 28-meal sequence by cycling recipe IDs.
+    for i in range(28):
+        rid = recipe_ids[i % len(recipe_ids)]
         snap = db.collection("recipes").document(rid).get()
         if not snap.exists:
             continue
@@ -669,7 +676,7 @@ def build_user_plan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dict[str
             "calories": r.get("calories"),
             "prepTime": r.get("prepTime"),
             "servings": r.get("servings"),
-            "totalCost": r.get("totalCost"),
+            "costPerServing": r.get("costPerServing"),
             "day": day,
             "slot": slot,
         })
@@ -681,10 +688,36 @@ def build_user_plan_doc(db: firestore.Client, recipe_ids: List[str]) -> Dict[str
         "weeks": [
             {"weekIndex": 0, "meals": meals_all[:7]},
             {"weekIndex": 1, "meals": meals_all[7:14]},
+            {"weekIndex": 2, "meals": meals_all[14:21]},
+            {"weekIndex": 3, "meals": meals_all[21:28]},
         ],
         "createdAt": now_ts(),
         "updatedAt": now_ts(),
     }
+
+
+def build_plan_days(weeks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    days: List[Dict[str, Any]] = []
+    day_index = 0
+    for week in weeks:
+        week_index = int(week.get("weekIndex", 0))
+        for meal in week.get("meals", []):
+            day_index += 1
+            days.append(
+                {
+                    "dayIndex": day_index,
+                    "weekIndex": week_index,
+                    "mealId": meal.get("id"),
+                    "name": meal.get("name"),
+                    "mealType": meal.get("slot"),
+                    "costPerServing": meal.get("costPerServing"),
+                    "calories": meal.get("calories"),
+                    "recipeRef": meal.get("recipeRef"),
+                    "createdAt": firestore.SERVER_TIMESTAMP,
+                    "updatedAt": firestore.SERVER_TIMESTAMP,
+                }
+            )
+    return days
 
 
 # -----------------------------
@@ -734,7 +767,7 @@ def seed(db: firestore.Client, user_id: str, dry_run: bool = False) -> None:
         for line in generate_ingredients(base.name):
             canon = canonicalize_ingredient_name(line)
             if canon not in canonical_to_id:
-                ing_id = slugify(canon)
+                ing_id = f"ingredient_{slugify(canon)}_uncategorized"
                 canonical_to_id[canon] = ing_id
                 ingredient_docs[ing_id] = build_ingredient_doc(canon)
 
@@ -772,6 +805,9 @@ def seed(db: firestore.Client, user_id: str, dry_run: bool = False) -> None:
     else:
         plan_doc = build_user_plan_doc(db=db, recipe_ids=recipe_ids)
         plan_ref.set(plan_doc)
+        for day in build_plan_days(plan_doc.get("weeks", [])):
+            day_id = f"day_{day['dayIndex']:02d}"
+            plan_ref.collection("days").document(day_id).set(day)
         print(f"Wrote users/{user_id}/plans/{plan_id}")
 
 
