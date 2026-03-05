@@ -5,13 +5,14 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 import firebase_admin
 from firebase_admin import credentials, firestore
 
 
 DEFAULT_COLLECTIONS = ("users", "recipes", "ingredients", "meta")
+SENTINEL_DOC_ID = "__keepalive__"
 
 
 def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
@@ -95,6 +96,10 @@ def main() -> int:
         for collection_name in args.collections:
             delete_collection(db.collection(collection_name))
             print(f"deleted {collection_name}")
+            db.collection(collection_name).document(SENTINEL_DOC_ID).set(
+                {"keepalive": True, "note": "Delete this doc if you want the collection hidden when empty."}
+            )
+            print(f"created {collection_name}/{SENTINEL_DOC_ID}")
         return 0
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
