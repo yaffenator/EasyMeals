@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from db.firestore_client import db
 from db.gemini_service import generate_meal_plan
 from db.ingredient_service import get_or_create_ingredient
+from db.ingredient_service import recalculate_meal_cost
 
 
 class PlanGenerationRequest(BaseModel):
@@ -71,6 +72,47 @@ def upsert_ingredient_prices(ingredient_prices: dict[str, Any]) -> dict[str, str
     return ingredient_id_map
 
 
+def _meal_to_dict(meal: Any) -> dict[str, Any]:
+    if hasattr(meal, "model_dump"):
+        return meal.model_dump()
+    if hasattr(meal, "dict"):
+        return meal.dict()
+    return dict(meal)
+
+
+def recalculate_meal_costs(
+    meals: list[Any],
+    ingredient_id_map: dict[str, str],
+) -> tuple[list[dict[str, Any]], float]:
+    processed_meals: list[dict[str, Any]] = []
+    total_estimated_cost = 0.0
+
+    for meal in meals:
+        meal_dict = _meal_to_dict(meal)
+        ingredient_items = meal_dict.get("ingredientItems", [])
+
+        for item in ingredient_items:
+            source_ingredient_id = item.get("ingredientId")
+            if source_ingredient_id in ingredient_id_map:
+                item["ingredientId"] = ingredient_id_map[source_ingredient_id]
+
+        trusted_cost = recalculate_meal_cost(ingredient_items)
+        meal_dict["costPerServing"] = trusted_cost
+
+        processed_meals.append(meal_dict)
+        total_estimated_cost += trusted_cost
+
+    return processed_meals, round(total_estimated_cost, 2)
+
+
+def chunk_meals_into_weeks(processed_meals: list[dict[str, Any]], chunk_size: int = 7) -> list[PlanWeek]:
+    weeks: list[PlanWeek] = []
+    for index in range(0, len(processed_meals), chunk_size):
+        week_index = index // chunk_size
+        weeks.append(PlanWeek(weekIndex=week_index, meals=processed_meals[index : index + chunk_size]))
+    return weeks
+
+
 def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     """
     Orchestrates plan creation and persistence for a user.
@@ -101,21 +143,32 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to upsert ingredient prices from Gemini response: {exc}") from exc
 
+    try:
+        processed_meals, estimated_total_cost = recalculate_meal_costs(
+            gemini_response.mealPlan,
+            ingredient_id_map,
+        )
+    except Exception as exc:
+        raise ValueError(f"Failed to recalculate meal costs server-side: {exc}") from exc
+
+    weeks = chunk_meals_into_weeks(processed_meals)
+
     plan_id = f"plan_{uuid4().hex}"
     return PlanGenerationResponse(
         userId=request.userId,
         planId=plan_id,
-        status="ingredients_mapped",
+        status="costs_recalculated",
         monthlyBudget=request.monthlyBudget,
-        estimatedTotalCost=0.0,
-        weeks=[],
+        estimatedTotalCost=estimated_total_cost,
+        weeks=weeks,
         groceryList=[],
         metadata={
-            "implementedStep": 3,
+            "implementedStep": 4,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
             "ingredientMappingCount": len(ingredient_id_map),
             "ingredientIdMap": ingredient_id_map,
+            "recalculatedMealCount": len(processed_meals),
             "todoFlow": TODO_FLOW,
         },
     )
