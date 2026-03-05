@@ -48,7 +48,7 @@ def _valid_gemini_payload():
     }
 
 
-def test_generate_and_store_plan_maps_ingredients_and_recalculates_costs():
+def test_generate_and_store_plan_dedupes_recipes_after_cost_recalculation():
     with patch("db.firestore_client.db", MagicMock()):
         from db.gemini_service import GeminiResponse
         from db.plan_service import PlanGenerationRequest, generate_and_store_plan
@@ -74,17 +74,40 @@ def test_generate_and_store_plan_maps_ingredients_and_recalculates_costs():
                         "db.plan_service.recalculate_meal_cost",
                         return_value=3.75,
                     ) as mock_recalculate:
-                        result = generate_and_store_plan(request)
+                        with patch(
+                            "db.plan_service.dedupe_or_create_recipes",
+                            return_value=(
+                                [
+                                    {
+                                        "id": "recipe_123",
+                                        "name": "Egg Scramble",
+                                        "costPerServing": 3.75,
+                                        "ingredientItems": [
+                                            {
+                                                "ingredientId": "ingredient_eggs_protein",
+                                                "quantity": 2,
+                                                "unit": "piece",
+                                            }
+                                        ],
+                                    }
+                                ],
+                                {"recipesCreated": 1, "recipesReused": 0},
+                            ),
+                        ) as mock_dedupe:
+                            result = generate_and_store_plan(request)
 
-        assert result.status == "costs_recalculated"
-        assert result.metadata["implementedStep"] == 4
+        assert result.status == "recipes_deduped"
+        assert result.metadata["implementedStep"] == 5
         assert result.metadata["mealCount"] == 1
         assert result.metadata["ingredientPriceCount"] == 1
         assert result.metadata["ingredientMappingCount"] == 1
         assert result.metadata["ingredientIdMap"]["ingredient_eggs_protein"] == "ingredient_eggs_protein"
         assert result.metadata["recalculatedMealCount"] == 1
+        assert result.metadata["recipesCreated"] == 1
+        assert result.metadata["recipesReused"] == 0
         assert result.estimatedTotalCost == 3.75
         assert len(result.weeks) == 1
+        assert result.weeks[0].meals[0]["id"] == "recipe_123"
         assert result.weeks[0].meals[0]["costPerServing"] == 3.75
         mock_generate.assert_called_once()
         mock_upsert.assert_called_once_with(
@@ -97,6 +120,7 @@ def test_generate_and_store_plan_maps_ingredients_and_recalculates_costs():
             aliases=[],
         )
         mock_recalculate.assert_called_once()
+        mock_dedupe.assert_called_once()
 
 
 def test_generate_and_store_plan_raises_if_db_not_initialized():
@@ -171,3 +195,26 @@ def test_generate_and_store_plan_wraps_cost_recalculation_errors():
                     with patch("db.plan_service.recalculate_meal_cost", side_effect=ValueError("bad ingredient data")):
                         with pytest.raises(ValueError, match="Failed to recalculate meal costs server-side"):
                             generate_and_store_plan(request)
+
+
+def test_generate_and_store_plan_wraps_recipe_dedupe_errors():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import GeminiResponse
+        from db.plan_service import PlanGenerationRequest, generate_and_store_plan
+
+        request = PlanGenerationRequest(
+            userId="user_1",
+            monthlyBudget=250.0,
+            goalType="maintain",
+        )
+
+        with patch("db.plan_service.db", MagicMock()):
+            with patch(
+                "db.plan_service.generate_meal_plan",
+                return_value=GeminiResponse(**_valid_gemini_payload()),
+            ):
+                with patch("db.plan_service.get_or_create_ingredient", return_value="ingredient_eggs_protein"):
+                    with patch("db.plan_service.recalculate_meal_cost", return_value=3.75):
+                        with patch("db.plan_service.dedupe_or_create_recipes", side_effect=ValueError("query failed")):
+                            with pytest.raises(ValueError, match="Failed to deduplicate or create recipes"):
+                                generate_and_store_plan(request)
