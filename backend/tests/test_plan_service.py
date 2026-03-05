@@ -529,6 +529,34 @@ def test_apply_diversity_selection_sorts_by_final_score():
         assert stats["selectedCount"] == 1
 
 
+def test_recalculate_meal_costs_reconciles_by_normalized_ingredient_name():
+    with patch("db.firestore_client.db", MagicMock()):
+        from db.plan_service import recalculate_meal_costs
+
+        meals = [
+            {
+                "name": "Egg Scramble",
+                "ingredientItems": [
+                    {
+                        "ingredientId": "ingredient_egg",
+                        "originalText": "2 eggs",
+                        "quantity": 2,
+                        "unit": "piece",
+                    }
+                ],
+            }
+        ]
+        ingredient_id_map = {"ingredient_eggs_protein": "ingredient_eggs_protein"}
+        ingredient_name_map = {"eggs": "ingredient_eggs_protein"}
+
+        with patch("db.plan_service.recalculate_meal_cost", return_value=1.2):
+            processed, total = recalculate_meal_costs(meals, ingredient_id_map, ingredient_name_map)
+
+        assert processed[0]["ingredientItems"][0]["ingredientId"] == "ingredient_eggs_protein"
+        assert processed[0]["costPerServing"] == 1.2
+        assert total == 1.2
+
+
 def test_generate_and_store_plan_wraps_meal_history_errors():
     with patch("db.firestore_client.db", MagicMock()):
         from db.gemini_service import GeminiResponse

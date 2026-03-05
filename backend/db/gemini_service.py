@@ -72,6 +72,8 @@ Rules:
 - Strictly exclude allergens listed above.
 - Keep meals diverse across the month.
 - Include practical ingredient measurements.
+- Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
+- Do not invent, rename, singularize, or pluralize ingredient IDs between sections.
 - Return only raw JSON with no markdown.
 
 Return JSON with this exact top-level shape:

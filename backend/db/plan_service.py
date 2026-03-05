@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 from uuid import uuid4
 
@@ -10,6 +11,7 @@ from db.firestore_client import db
 from db.diversity_service import compute_final_scores
 from db.gemini_service import generate_meal_plan
 from db.ingredient_service import get_or_create_ingredient
+from db.ingredient_service import normalize_name
 from db.ingredient_service import recalculate_meal_cost
 
 
@@ -71,7 +73,33 @@ def upsert_ingredient_prices(ingredient_prices: dict[str, Any]) -> dict[str, str
         )
         ingredient_id_map[source_key] = ingredient_id
 
+        # Alias mapping: Gemini sometimes references ingredient IDs in meals as
+        # ingredient_<name> while ingredientPrices may use ingredient_<name>_<category>.
+        normalized_name_slug = normalize_name(ingredient_price.name).replace(" ", "_")
+        ingredient_id_map.setdefault(f"ingredient_{normalized_name_slug}", ingredient_id)
+
+        # Singular/plural alias safety:
+        # e.g. ingredient_egg <-> ingredient_eggs
+        if normalized_name_slug.endswith("s") and len(normalized_name_slug) > 1:
+            singular = normalized_name_slug[:-1]
+            ingredient_id_map.setdefault(f"ingredient_{singular}", ingredient_id)
+        else:
+            plural = f"{normalized_name_slug}s"
+            ingredient_id_map.setdefault(f"ingredient_{plural}", ingredient_id)
+
     return ingredient_id_map
+
+
+def build_normalized_name_map(ingredient_prices: dict[str, Any], ingredient_id_map: dict[str, str]) -> dict[str, str]:
+    normalized_name_map: dict[str, str] = {}
+    for source_key, ingredient_price in ingredient_prices.items():
+        mapped_id = ingredient_id_map.get(source_key)
+        if not mapped_id:
+            continue
+        normalized = normalize_name(ingredient_price.name)
+        if normalized:
+            normalized_name_map[normalized] = mapped_id
+    return normalized_name_map
 
 
 def _meal_to_dict(meal: Any) -> dict[str, Any]:
@@ -82,9 +110,48 @@ def _meal_to_dict(meal: Any) -> dict[str, Any]:
     return dict(meal)
 
 
+def _name_from_original_text(original_text: str) -> str:
+    # Remove common leading measurement patterns (e.g. "2 cups", "1/2 tsp", "3")
+    text = original_text.strip().lower()
+    text = re.sub(
+        r"^\s*\d+(?:\.\d+)?(?:\s*/\s*\d+)?\s*(cup|cups|tbsp|tsp|oz|lb|g|kg|ml|l|piece|pieces)?\s*",
+        "",
+        text,
+    )
+    text = re.sub(r"\([^)]*\)", "", text).strip()
+    return normalize_name(text)
+
+
+def _candidate_normalized_names(item: dict[str, Any]) -> list[str]:
+    candidates: list[str] = []
+
+    raw_name = item.get("name")
+    if isinstance(raw_name, str) and raw_name.strip():
+        candidates.append(normalize_name(raw_name))
+
+    original_text = item.get("originalText")
+    if isinstance(original_text, str) and original_text.strip():
+        parsed_name = _name_from_original_text(original_text)
+        if parsed_name:
+            candidates.append(parsed_name)
+
+    ingredient_id = item.get("ingredientId")
+    if isinstance(ingredient_id, str) and ingredient_id.startswith("ingredient_"):
+        slug = ingredient_id[len("ingredient_") :].replace("_", " ").strip()
+        if slug:
+            candidates.append(normalize_name(slug))
+            slug_parts = slug.split()
+            if len(slug_parts) > 1:
+                candidates.append(normalize_name(" ".join(slug_parts[:-1])))
+
+    # preserve insertion order while removing duplicates
+    return list(dict.fromkeys(candidates))
+
+
 def recalculate_meal_costs(
     meals: list[Any],
     ingredient_id_map: dict[str, str],
+    ingredient_name_map: dict[str, str],
 ) -> tuple[list[dict[str, Any]], float]:
     processed_meals: list[dict[str, Any]] = []
     total_estimated_cost = 0.0
@@ -97,6 +164,13 @@ def recalculate_meal_costs(
             source_ingredient_id = item.get("ingredientId")
             if source_ingredient_id in ingredient_id_map:
                 item["ingredientId"] = ingredient_id_map[source_ingredient_id]
+                continue
+
+            for candidate_name in _candidate_normalized_names(item):
+                mapped_id = ingredient_name_map.get(candidate_name)
+                if mapped_id:
+                    item["ingredientId"] = mapped_id
+                    break
 
         trusted_cost = recalculate_meal_cost(ingredient_items)
         meal_dict["costPerServing"] = trusted_cost
@@ -446,10 +520,13 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     except Exception as exc:
         raise ValueError(f"Failed to upsert ingredient prices from Gemini response: {exc}") from exc
 
+    ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
+
     try:
         processed_meals, estimated_total_cost = recalculate_meal_costs(
             gemini_response.mealPlan,
             ingredient_id_map,
+            ingredient_name_map,
         )
     except Exception as exc:
         raise ValueError(f"Failed to recalculate meal costs server-side: {exc}") from exc
@@ -519,7 +596,7 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             "implementedStep": 9,
             "mealCount": len(gemini_response.mealPlan),
             "ingredientPriceCount": len(gemini_response.ingredientPrices),
-            "ingredientMappingCount": len(ingredient_id_map),
+            "ingredientMappingCount": len(set(ingredient_id_map.values())),
             "ingredientIdMap": ingredient_id_map,
             "recalculatedMealCount": len(processed_meals),
             "recipesCreated": recipe_stats["recipesCreated"],
