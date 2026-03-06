@@ -33,6 +33,7 @@ type MealPlanContextValue = {
   isLoading: boolean;
   error: string | null;
   refreshPlan: () => Promise<void>;
+  lastRefreshAt: number;
 };
 
 const MealPlanContext = createContext<MealPlanContextValue | null>(null);
@@ -111,6 +112,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
   const imageTriggerByPlan = useRef<Set<string>>(new Set());
 
   const fetchLatestPlan = useCallback(async () => {
@@ -147,6 +149,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
       }
 
       setMealPlan(normalizePlan(payload));
+      setLastRefreshAt(Date.now());
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load plan";
       setError(message);
@@ -198,6 +201,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         error,
         refreshPlan: fetchLatestPlan,
+        lastRefreshAt,
       }}
     >
       {children}

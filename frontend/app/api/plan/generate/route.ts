@@ -8,6 +8,8 @@ import {
   readBearerHeader,
 } from "@/app/lib/backendClient";
 
+export const maxDuration = 120;
+
 export async function POST(request: Request) {
   try {
     const authorization = readBearerHeader(request.headers);

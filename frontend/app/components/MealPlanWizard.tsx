@@ -83,6 +83,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
   const [weight, setWeight] = useState("");
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [excludedCuisines, setExcludedCuisines] = useState("");
+  const [timedOutGeneration, setTimedOutGeneration] = useState(false);
 
   const hasMaxDecimals = (value: string, maxDecimals: number): boolean => {
     if (!value.includes(".")) return true;
@@ -100,6 +101,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
   const handleNext = async () => {
     setErrorMessage("");
+    setTimedOutGeneration(false);
 
     if (step < 5) {
       setStep(step + 1);
@@ -161,6 +163,12 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         }
         if (response.status === 400) {
           throw new Error(`Please fix your inputs: ${detail}`);
+        }
+        if (response.status === 504) {
+          setTimedOutGeneration(true);
+          throw new Error(
+            "Generation is taking longer than expected. Your request may still finish; use dashboard refresh after about 30 seconds.",
+          );
         }
         throw new Error(detail);
       }
@@ -362,6 +370,13 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
           {errorMessage && (
             <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {errorMessage}
+            </p>
+          )}
+
+          {timedOutGeneration && (
+            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              If this was a timeout, your backend generation may still complete shortly. You can close this
+              wizard and click <span className="font-medium">Check for Completed Plan</span> on the dashboard.
             </p>
           )}
 

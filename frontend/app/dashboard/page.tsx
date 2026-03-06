@@ -73,11 +73,12 @@ const isImageMissing = (value: unknown): boolean => {
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
-  const { mealPlan, setMealPlan, isLoading } = useMealPlan();
+  const { mealPlan, setMealPlan, isLoading, refreshPlan } = useMealPlan();
 
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
+  const [isRefreshingPlan, setIsRefreshingPlan] = useState(false);
 
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -125,6 +126,15 @@ export default function Dashboard() {
     setShowWizard(true);
   };
 
+  const handleRefreshPlan = async () => {
+    setIsRefreshingPlan(true);
+    try {
+      await refreshPlan();
+    } finally {
+      setIsRefreshingPlan(false);
+    }
+  };
+
   const displayName = auth.currentUser?.displayName || currentUser?.displayName;
   const emailName = auth.currentUser?.email?.split("@")[0] || currentUser?.email?.split("@")[0] || "Chef";
   const prefBudget =
@@ -169,6 +179,15 @@ export default function Dashboard() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Create Your Meal Plan
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleRefreshPlan}
+              disabled={isRefreshingPlan}
+              className="ml-3"
+            >
+              {isRefreshingPlan ? "Checking..." : "Check for Completed Plan"}
             </Button>
           </div>
         </main>
@@ -312,6 +331,9 @@ export default function Dashboard() {
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" onClick={handleGenerateNew}>
             Generate New Plan
+          </Button>
+          <Button size="lg" variant="outline" onClick={handleRefreshPlan} disabled={isRefreshingPlan}>
+            {isRefreshingPlan ? "Refreshing..." : "Refresh Plan"}
           </Button>
           <Button size="lg" variant="outline">
             Download Shopping List

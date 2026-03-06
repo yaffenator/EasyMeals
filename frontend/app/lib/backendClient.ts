@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 const DEFAULT_BACKEND_API_URL = "http://localhost:8000";
-const DEFAULT_TIMEOUT_MS = 20_000;
+const DEFAULT_TIMEOUT_MS = 90_000;
+const MIN_TIMEOUT_MS = 10_000;
+const MAX_TIMEOUT_MS = 180_000;
 
 export class BackendProxyError extends Error {
   status: number;
@@ -15,6 +17,20 @@ export class BackendProxyError extends Error {
 export function getBackendBaseUrl(): string {
   const raw = process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
   return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+}
+
+function clampTimeoutMs(value: number): number {
+  if (value < MIN_TIMEOUT_MS) return MIN_TIMEOUT_MS;
+  if (value > MAX_TIMEOUT_MS) return MAX_TIMEOUT_MS;
+  return value;
+}
+
+export function getBackendTimeoutMs(): number {
+  const raw = process.env.BACKEND_PROXY_TIMEOUT_MS;
+  if (!raw) return DEFAULT_TIMEOUT_MS;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_TIMEOUT_MS;
+  return clampTimeoutMs(parsed);
 }
 
 export function extractForwardHeaders(source: Headers): HeadersInit {
@@ -41,7 +57,7 @@ export function readBearerHeader(source: Headers): string | null {
 export async function forwardToBackend(
   path: string,
   init: RequestInit,
-  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+  timeoutMs: number = getBackendTimeoutMs(),
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
