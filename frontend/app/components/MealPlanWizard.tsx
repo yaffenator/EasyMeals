@@ -16,8 +16,6 @@ import { Checkbox } from "./ui/checkbox";
 import { ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
 import {
   updateUserPreferences,
-  uploadMealPlanToUser,
-  loadMealPlanFromFirestore,
   auth,
 } from "../firebase";
 
@@ -32,6 +30,31 @@ export interface MealPlanData {
   currentWeight: number;
   allergies: string[];
   excludedCuisines: string[];
+}
+
+interface BackendMeal {
+  [key: string]: unknown;
+  day?: string;
+  costPerServing?: number | string;
+  carbs?: number | string;
+  fat?: number | string;
+  protein?: number | string;
+}
+
+interface BackendWeek {
+  [key: string]: unknown;
+  weekIndex?: number;
+  meals?: BackendMeal[];
+}
+
+interface BackendGeneratePlanResponse {
+  planId?: string;
+  status?: string;
+  monthlyBudget?: number;
+  estimatedTotalCost?: number;
+  groceryList?: unknown[];
+  metadata?: Record<string, unknown>;
+  weeks?: BackendWeek[];
 }
 
 const commonAllergies = [
@@ -53,6 +76,7 @@ const commonAllergies = [
 export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [monthlyBudget, setMonthlyBudget] = useState("");
   const [goal, setGoal] = useState<"lose" | "gain" | "maintain">("maintain");
@@ -60,7 +84,23 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [excludedCuisines, setExcludedCuisines] = useState("");
 
+  const hasMaxDecimals = (value: string, maxDecimals: number): boolean => {
+    if (!value.includes(".")) return true;
+    const [, decimalPart] = value.split(".");
+    return decimalPart.length <= maxDecimals;
+  };
+
+  const toCurrencyString = (value: unknown): string => {
+    if (typeof value === "number") return `$${value.toFixed(2)}`;
+    if (typeof value === "string") {
+      return value.startsWith("$") ? value : `$${value}`;
+    }
+    return "$0.00";
+  };
+
   const handleNext = async () => {
+    setErrorMessage("");
+
     if (step < 5) {
       setStep(step + 1);
       return;
@@ -87,76 +127,93 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
       // 1. Update user profile in Firestore
       await updateUserPreferences(uid, finalData);
 
-      // 2. Call the new skeleton route (save-preferences)
-      const response = await fetch("/api/save-preferences", {
+      const generationPayload = {
+        userId: uid,
+        monthlyBudget: Number.parseFloat(monthlyBudget),
+        weight: Number.parseFloat(weight),
+        goalType: goal,
+        dietaryTags: [],
+        allergies: selectedAllergies.map((allergy) => allergy.toLowerCase()),
+      };
+
+      // 2. Generate a full plan from backend
+      const response = await fetch("/api/plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(finalData),
+        body: JSON.stringify(generationPayload),
       });
 
       if (!response.ok) {
-        throw new Error("Skeleton generation failed");
+        let detail = "Plan generation failed";
+        try {
+          const errorData = await response.json();
+          detail = errorData?.detail || detail;
+        } catch {
+          // Preserve default message when response is not JSON.
+        }
+
+        if (response.status === 409) {
+          throw new Error("A meal plan is already generating for your account. Please wait and retry.");
+        }
+        if (response.status === 400) {
+          throw new Error(`Please fix your inputs: ${detail}`);
+        }
+        throw new Error(detail);
       }
 
-      const responseData = await response.json();
+      const responseData = (await response.json()) as BackendGeneratePlanResponse;
 
-      // 3. Transform the skeleton into the FullMealPlan format
-      // We add unique IDs and ensure status is "pending"
-      // Inside handleNext in MealPlanWizard.tsx
+      // 3. Transform backend response into current dashboard-compatible shape.
       const generatedMealPlan = {
         preferences: finalData,
-        weeks: responseData.weeks.map((week: any) => ({
+        planId: responseData.planId,
+        status: responseData.status,
+        monthlyBudget: responseData.monthlyBudget,
+        estimatedTotalCost: responseData.estimatedTotalCost,
+        groceryList: responseData.groceryList || [],
+        metadata: responseData.metadata || {},
+        weeks: (responseData.weeks || []).map((week: BackendWeek) => ({
           ...week,
-          meals: week.meals.map((meal: any) => ({
-            // 1. Keep the AI-generated name and day
-            name: meal.name,
-            day: meal.day,
-            
-            // 2. Metadata
-            id: crypto.randomUUID(),
-            status: "pending", // Dashboard uses this for the loader
-            
-            // 3. Placeholder values (Prevents Firebase "undefined" errors)
-            description: meal.description || "",
-            calories: 0,
-            carbs: "0g",
-            fat: "0g",
-            protein: "0g",
-            prepTime: "0 min",
-            cookTime: 0,
-            servings: 0,
-            totalCost: "$0.00",
-            costPerServing: "$0.00",
-            instructions: [],
-            ingredients: [],
-            ingredientItems: [],
-            tags: [],
-            tips: [],
-            source: "generated",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }))
+          weekNumber: (week.weekIndex ?? 0) + 1,
+          meals: (week.meals || []).map((meal: BackendMeal, idx: number) => ({
+            ...meal,
+            day: meal.day || [
+              "Monday",
+              "Tuesday",
+              "Wednesday",
+              "Thursday",
+              "Friday",
+              "Saturday",
+              "Sunday",
+            ][idx % 7],
+            totalCost: toCurrencyString(meal.costPerServing),
+            costPerServing: toCurrencyString(meal.costPerServing),
+            carbs: meal.carbs != null ? `${meal.carbs}g` : "0g",
+            fat: meal.fat != null ? `${meal.fat}g` : "0g",
+            protein: meal.protein != null ? `${meal.protein}g` : "0g",
+            status: "completed",
+          })),
         })),
         createdAt: new Date().toISOString(),
       };
 
-      // 4. Save the skeleton to Firestore
-      await uploadMealPlanToUser(uid, generatedMealPlan);
-
-      // 5. Fire-and-forget: trigger backend image generation (optional)
+      // 4. Fire-and-forget: trigger backend image generation (optional)
       fetch("/api/generate-meal-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid }),
       }).catch((err) => console.error("Image trigger failed:", err));
 
-      // 6. Pass the skeleton to the parent (Dashboard)
-      // The Dashboard's useEffect will now see the "pending" meals and start hydrating
+      // 5. Pass generated plan to parent (Dashboard)
       onComplete(generatedMealPlan);
       
     } catch (error) {
       console.error("Error during setup:", error);
-      alert("Something went wrong. Please check your connection and try again.");
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("Something went wrong. Please check your connection and try again.");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -165,9 +222,27 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
   const handleBack = () => step > 1 && setStep(step - 1);
 
   const canProceed = () => {
-    if (step === 1) return monthlyBudget !== "" && parseFloat(monthlyBudget) > 0;
+    if (step === 1) {
+      const budget = Number.parseFloat(monthlyBudget);
+      return (
+        monthlyBudget !== "" &&
+        Number.isFinite(budget) &&
+        budget >= 50 &&
+        budget <= 1000 &&
+        hasMaxDecimals(monthlyBudget, 2)
+      );
+    }
     if (step === 2) return !!goal;
-    if (step === 3) return weight !== "" && parseFloat(weight) > 0;
+    if (step === 3) {
+      const currentWeight = Number.parseFloat(weight);
+      return (
+        weight !== "" &&
+        Number.isFinite(currentWeight) &&
+        currentWeight >= 100 &&
+        currentWeight <= 380 &&
+        hasMaxDecimals(weight, 1)
+      );
+    }
     return true;
   };
 
@@ -188,10 +263,16 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                 <Input
                   id="budget"
                   type="number"
+                  step="0.01"
+                  min="50"
+                  max="1000"
                   placeholder="400"
                   value={monthlyBudget}
                   onChange={(e) => setMonthlyBudget(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter a value from 50.00 to 1000.00 (max 2 decimals).
+                </p>
               </div>
             </div>
           )}
@@ -225,10 +306,16 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                 <Input
                   id="weight"
                   type="number"
+                  step="0.1"
+                  min="100"
+                  max="380"
                   placeholder="165"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Enter a value from 100.0 to 380.0 lbs (max 1 decimal).
+                </p>
               </div>
             </div>
           )}
@@ -266,6 +353,12 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                 onChange={(e) => setExcludedCuisines(e.target.value)}
               />
             </div>
+          )}
+
+          {errorMessage && (
+            <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {errorMessage}
+            </p>
           )}
 
           <div className="flex justify-between mt-8 pt-4 border-t">
