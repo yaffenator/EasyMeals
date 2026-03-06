@@ -15,13 +15,6 @@ import {
   getDoc,
   updateDoc,
   serverTimestamp,
-  collection,
-  addDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  deleteDoc,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -45,7 +38,6 @@ export const db = getFirestore(app);
 
 const googleProvider = new GoogleAuthProvider();
 const githubProvider = new GithubAuthProvider();
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export const registerUser = async (email, password, name) => {
   try {
@@ -139,67 +131,5 @@ export const updateUserPreferences = async (uid, preferencesData) => {
   } catch (error) {
     console.error("Error saving preferences:", error);
     throw error;
-  }
-};
-
-export const uploadMealPlanToUser = async (uid, mealPlan) => {
-  if (!uid || !mealPlan) return;
-
-  try {
-    const userRef = doc(db, "users", uid);
-    const plansRef = collection(db, "users", uid, "plans");
-    const nowIso = new Date().toISOString();
-    
-    // Primary aligned write path: users/{uid}/plans/{planId}
-    await addDoc(plansRef, {
-      ...mealPlan,
-      status: mealPlan.status || "ready",
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    });
-
-    // Backward-compatible mirror to legacy field.
-    await setDoc(
-      userRef,
-      {
-        uid,
-        currentMealPlan: {
-          ...mealPlan,
-          updatedAt: nowIso,
-        },
-        updatedAt: nowIso,
-      },
-      { merge: true },
-    );
-
-    console.log("Meal plan synced successfully.");
-  } catch (error) {
-    console.error("Error syncing meal plan:", error);
-    throw error;
-  }
-};
-
-export const loadMealPlanFromFirestore = async (uid) => {
-  if (!uid) return null;
-
-  try {
-    const plansRef = collection(db, "users", uid, "plans");
-    const latestPlanQuery = query(plansRef, orderBy("createdAt", "desc"), limit(1));
-    const planSnap = await getDocs(latestPlanQuery);
-
-    if (!planSnap.empty) {
-      return planSnap.docs[0].data();
-    }
-
-    // Backward-compatible fallback.
-    const userSnap = await getDoc(doc(db, "users", uid));
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      return data.currentMealPlan || null;
-    }
-    return null;
-  } catch (error) {
-    console.error("Error loading meal plan:", error);
-    return null;
   }
 };

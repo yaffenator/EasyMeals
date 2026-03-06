@@ -1,6 +1,18 @@
-import { Recipe } from './MealPlanGenerator';
+type RecipeLikeBase = {
+  id?: string;
+  day?: string;
+  name?: string;
+  description?: string;
+  image?: string;
+  prepTime?: string;
+  cost?: string;
+  servings?: number;
+  calories?: number;
+  category?: string;
+  status?: "pending" | "completed";
+};
 
-export interface DetailedRecipe extends Partial<Recipe> {
+export interface DetailedRecipe extends Partial<RecipeLikeBase> {
   name: string;
   day: string;
   description: string;
@@ -26,7 +38,7 @@ export interface DetailedRecipe extends Partial<Recipe> {
   };
 }
 
-type RecipeLike = Partial<Recipe> & {
+type RecipeLike = Partial<RecipeLikeBase> & {
   totalCost?: string | number;
   cost?: string | number;
   protein?: string | number;
