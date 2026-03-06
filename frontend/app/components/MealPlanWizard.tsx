@@ -123,6 +123,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
     try {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error("No user ID found");
+      const idToken = await auth.currentUser.getIdToken();
 
       // 1. Update user profile in Firestore
       await updateUserPreferences(uid, finalData);
@@ -139,7 +140,10 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
       // 2. Generate a full plan from backend
       const response = await fetch("/api/plan/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify(generationPayload),
       });
 

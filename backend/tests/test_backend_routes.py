@@ -1,8 +1,11 @@
+import os
 from datetime import datetime, timezone
 from importlib import import_module
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
+
+os.environ["TESTING"] = "true"
 
 
 def _load_app_module():

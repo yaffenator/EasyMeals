@@ -5,10 +5,16 @@ import {
   extractForwardHeaders,
   forwardToBackend,
   passthroughResponse,
+  readBearerHeader,
 } from "@/app/lib/backendClient";
 
 export async function POST(request: Request) {
   try {
+    const authorization = readBearerHeader(request.headers);
+    if (!authorization) {
+      return NextResponse.json({ detail: "Missing Authorization bearer token" }, { status: 401 });
+    }
+
     const payload = await request.json();
     const backendResponse = await forwardToBackend("/api/generate-plan", {
       method: "POST",

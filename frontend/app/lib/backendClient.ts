@@ -30,6 +30,14 @@ export function extractForwardHeaders(source: Headers): HeadersInit {
   return headers;
 }
 
+export function readBearerHeader(source: Headers): string | null {
+  const authorization = source.get("authorization");
+  if (!authorization) return null;
+  if (!authorization.startsWith("Bearer ")) return null;
+  if (!authorization.slice("Bearer ".length).trim()) return null;
+  return authorization;
+}
+
 export async function forwardToBackend(
   path: string,
   init: RequestInit,

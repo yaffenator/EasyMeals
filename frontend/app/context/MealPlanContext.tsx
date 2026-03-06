@@ -125,8 +125,12 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
+      const idToken = await auth.currentUser.getIdToken();
       const response = await fetch(`/api/plan/latest?userId=${encodeURIComponent(uid)}`, {
         method: "GET",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
         cache: "no-store",
       });
 

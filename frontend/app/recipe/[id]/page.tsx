@@ -84,9 +84,13 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     setRatingSuccess(null);
 
     try {
+      const idToken = await auth.currentUser.getIdToken();
       const response = await fetch('/api/plan/rate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           mealId: recipe.id,
           userId: uid,

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import os
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from dotenv import load_dotenv
+from firebase_admin import auth as firebase_auth
 
 load_dotenv()
 
@@ -32,6 +34,37 @@ class RateMealRequest(BaseModel):
     mealId: str
     userId: str
     rating: int
+
+
+def _is_testing_mode() -> bool:
+    return os.environ.get("TESTING", "").lower() == "true"
+
+
+def _extract_bearer_token(authorization: str | None) -> str:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header.")
+    prefix = "Bearer "
+    if not authorization.startswith(prefix):
+        raise HTTPException(status_code=401, detail="Authorization must use Bearer token.")
+    token = authorization[len(prefix) :].strip()
+    if not token:
+        raise HTTPException(status_code=401, detail="Bearer token is empty.")
+    return token
+
+
+def _authorize_user(user_id: str, authorization: str | None) -> None:
+    if _is_testing_mode():
+        return
+
+    token = _extract_bearer_token(authorization)
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid Firebase ID token: {exc}") from exc
+
+    token_uid = decoded.get("uid")
+    if token_uid != user_id:
+        raise HTTPException(status_code=403, detail="Token user does not match requested user.")
 
 
 def _serialize_firestore(value: Any) -> Any:
@@ -81,9 +114,10 @@ def health_check():
 
 
 @app.post("/api/generate-plan")
-def generate_plan(payload: dict[str, Any]):
+def generate_plan(payload: dict[str, Any], authorization: str | None = Header(default=None)):
     try:
         request = PlanGenerationRequest(**payload)
+        _authorize_user(request.userId, authorization)
         response = generate_and_store_plan(request)
         return _serialize_firestore(response.model_dump())
     except ValidationError as exc:
@@ -97,8 +131,9 @@ def generate_plan(payload: dict[str, Any]):
 
 
 @app.post("/api/rate-meal")
-def rate_meal_endpoint(payload: RateMealRequest):
+def rate_meal_endpoint(payload: RateMealRequest, authorization: str | None = Header(default=None)):
     try:
+        _authorize_user(payload.userId, authorization)
         updated = rate_meal(payload.mealId, payload.userId, payload.rating)
         return {"ok": True, "mealId": payload.mealId, "updated": _serialize_firestore(updated)}
     except ValueError as exc:
@@ -108,9 +143,10 @@ def rate_meal_endpoint(payload: RateMealRequest):
 
 
 @app.get("/api/get-plan/{user_id}")
-def get_plan(user_id: str):
+def get_plan(user_id: str, authorization: str | None = Header(default=None)):
     if db is None:
         raise HTTPException(status_code=500, detail="Firestore client is not initialized.")
+    _authorize_user(user_id, authorization)
 
     try:
         plan_docs = list(db.collection("users").document(user_id).collection("plans").stream())
