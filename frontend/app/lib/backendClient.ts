@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const DEFAULT_BACKEND_API_URL = "http://localhost:8000";
-const DEFAULT_TIMEOUT_MS = 90_000;
+const DEFAULT_TIMEOUT_MS = 180_000;
 const MIN_TIMEOUT_MS = 10_000;
 const MAX_TIMEOUT_MS = 180_000;
 

@@ -6,3 +6,5 @@ backend/tests/__pycache__
 .venv
 backend/__pycache__
 frontend/.env.local
+backend/logs
+frontend/public/meal-images

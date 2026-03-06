@@ -32,11 +32,14 @@ type MealPlanContextValue = {
   setMealPlan: React.Dispatch<React.SetStateAction<MealPlan | null>>;
   isLoading: boolean;
   error: string | null;
-  refreshPlan: () => Promise<void>;
+  refreshPlan: (options?: { silent?: boolean }) => Promise<void>;
   lastRefreshAt: number;
+  imageSyncStatus: "idle" | "syncing" | "ready" | "timeout";
 };
 
 const MealPlanContext = createContext<MealPlanContextValue | null>(null);
+const IMAGE_POLL_INTERVAL_MS = 10_000;
+const IMAGE_POLL_MAX_DURATION_MS = 5 * 60_000;
 
 function toNumber(value: unknown, fallback: number = 0): number {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -108,23 +111,46 @@ function normalizePlan(raw: unknown): MealPlan | null {
   };
 }
 
+function hasPendingImages(plan: MealPlan | null): boolean {
+  if (!plan) return false;
+  for (const week of plan.weeks) {
+    for (const meal of week.meals) {
+      const imageValue = typeof meal.image === "string" ? meal.image.trim() : "";
+      const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
+      const missingImage =
+        !imageValue || imageValue.startsWith("/api/placeholder") || imageValue.startsWith("/meal-placeholder");
+      if (status === "pending" || (missingImage && status !== "failed")) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function MealPlanProvider({ children }: { children: React.ReactNode }) {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
+  const [imageSyncStatus, setImageSyncStatus] = useState<"idle" | "syncing" | "ready" | "timeout">("idle");
   const imageTriggerByPlan = useRef<Set<string>>(new Set());
+  const imagePollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const imagePollStartedAtRef = useRef<number | null>(null);
+  const imageReadyNoticeShownRef = useRef<Set<string>>(new Set());
 
-  const fetchLatestPlan = useCallback(async () => {
+  const fetchLatestPlan = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = Boolean(options?.silent);
     const uid = auth.currentUser?.uid;
     if (!uid) {
       setMealPlan(null);
       setIsLoading(false);
-      return;
+      return null;
     }
 
-    setIsLoading(true);
-    setError(null);
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       const idToken = await auth.currentUser.getIdToken();
@@ -138,7 +164,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
 
       if (response.status === 404) {
         setMealPlan(null);
-        return;
+        return null;
       }
 
       const payload = await response.json();
@@ -148,14 +174,19 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
         throw new Error(detail);
       }
 
-      setMealPlan(normalizePlan(payload));
+      const normalized = normalizePlan(payload);
+      setMealPlan(normalized);
       setLastRefreshAt(Date.now());
+      return normalized;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load plan";
       setError(message);
       setMealPlan(null);
+      return null;
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -193,6 +224,70 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
     });
   }, [mealPlan]);
 
+  useEffect(() => {
+    if (!mealPlan) {
+      setImageSyncStatus("idle");
+      if (imagePollIntervalRef.current) {
+        clearInterval(imagePollIntervalRef.current);
+        imagePollIntervalRef.current = null;
+      }
+      imagePollStartedAtRef.current = null;
+      return;
+    }
+
+    const planKey = mealPlan.planId || `anon-${mealPlan.createdAt || "unknown"}`;
+    const pending = hasPendingImages(mealPlan);
+
+    if (!pending) {
+      if (!imageReadyNoticeShownRef.current.has(planKey)) {
+        setImageSyncStatus("ready");
+        imageReadyNoticeShownRef.current.add(planKey);
+      } else if (imageSyncStatus !== "ready") {
+        setImageSyncStatus("idle");
+      }
+      if (imagePollIntervalRef.current) {
+        clearInterval(imagePollIntervalRef.current);
+        imagePollIntervalRef.current = null;
+      }
+      imagePollStartedAtRef.current = null;
+      return;
+    }
+
+    setImageSyncStatus("syncing");
+    if (imagePollIntervalRef.current) return;
+
+    imagePollStartedAtRef.current = Date.now();
+    imagePollIntervalRef.current = setInterval(async () => {
+      const startedAt = imagePollStartedAtRef.current ?? Date.now();
+      if (Date.now() - startedAt > IMAGE_POLL_MAX_DURATION_MS) {
+        setImageSyncStatus("timeout");
+        if (imagePollIntervalRef.current) {
+          clearInterval(imagePollIntervalRef.current);
+          imagePollIntervalRef.current = null;
+        }
+        return;
+      }
+
+      const latest = await fetchLatestPlan({ silent: true });
+      if (!hasPendingImages(latest)) {
+        setImageSyncStatus("ready");
+        const latestKey = latest?.planId || planKey;
+        imageReadyNoticeShownRef.current.add(latestKey);
+        if (imagePollIntervalRef.current) {
+          clearInterval(imagePollIntervalRef.current);
+          imagePollIntervalRef.current = null;
+        }
+      }
+    }, IMAGE_POLL_INTERVAL_MS);
+
+    return () => {
+      if (imagePollIntervalRef.current) {
+        clearInterval(imagePollIntervalRef.current);
+        imagePollIntervalRef.current = null;
+      }
+    };
+  }, [mealPlan, fetchLatestPlan, imageSyncStatus]);
+
   return (
     <MealPlanContext.Provider
       value={{
@@ -202,6 +297,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
         error,
         refreshPlan: fetchLatestPlan,
         lastRefreshAt,
+        imageSyncStatus,
       }}
     >
       {children}

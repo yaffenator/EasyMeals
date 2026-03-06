@@ -46,7 +46,7 @@ type RecipeLike = Partial<RecipeLikeBase> & {
   fat?: string | number;
   difficulty?: string;
   ingredients?: string[];
-  instructions?: string[];
+  instructions?: string | string[];
   tips?: string[];
   cookTime?: number;
 };
@@ -71,12 +71,33 @@ export function generateRecipeDetails(input: RecipeLike): DetailedRecipe {
   const carbs = input.carbs != null ? String(input.carbs) : '0g';
   const fat = input.fat != null ? String(input.fat) : '0g';
 
+  const parsedInstructions = (() => {
+    if (Array.isArray(input.instructions)) {
+      return input.instructions.map((step) => String(step).trim()).filter(Boolean);
+    }
+    if (typeof input.instructions === 'string') {
+      const raw = input.instructions.trim();
+      if (!raw) return [];
+      if (raw.includes('\n')) {
+        return raw
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean);
+      }
+      return raw
+        .split(/(?<=[.!?])\s+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+    return [];
+  })();
+
   return {
     ...input,
     name: input.name ? String(input.name) : 'Recipe',
     day: input.day ? String(input.day) : 'Day',
     description: input.description ? String(input.description) : '',
-    image: input.image ? String(input.image) : '/api/placeholder/400/300',
+    image: input.image ? String(input.image) : '/meal-placeholder.svg',
     prepTime: input.prepTime ? String(input.prepTime) : '0 min',
     servings,
     calories: typeof input.calories === 'number' ? input.calories : 0,
@@ -85,7 +106,7 @@ export function generateRecipeDetails(input: RecipeLike): DetailedRecipe {
     fat,
     difficulty: input.difficulty ? String(input.difficulty) : 'Medium',
     ingredients: Array.isArray(input.ingredients) ? input.ingredients : [],
-    instructions: Array.isArray(input.instructions) ? input.instructions : [],
+    instructions: parsedInstructions,
     tips: Array.isArray(input.tips) ? input.tips : [],
     totalCost,
     costPerServing,

@@ -39,6 +39,7 @@ type DashboardMeal = {
   totalCost?: string;
   costPerServing?: number | string;
   calories?: number;
+  imageGenStatus?: string;
 };
 
 type DashboardWeek = {
@@ -65,15 +66,28 @@ const parseMinutes = (value: unknown): number => {
 };
 
 const formatCurrency = (value: unknown): string => `$${parseMoney(value).toFixed(2)}`;
-const isImageMissing = (value: unknown): boolean => {
-  if (typeof value !== "string") return true;
+const imageBadgeForMeal = (meal: DashboardMeal): { label: string; className: string } | null => {
+  const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
+  if (status === "failed") {
+    return { label: "Image Failed", className: "bg-red-100 text-red-800" };
+  }
+  if (status === "pending") {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
+  const value = meal.image;
+  if (typeof value !== "string") {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
   const trimmed = value.trim();
-  return !trimmed || trimmed.startsWith("/api/placeholder");
+  if (!trimmed || trimmed.startsWith("/api/placeholder") || trimmed.startsWith("/meal-placeholder")) {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
+  return null;
 };
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
-  const { mealPlan, setMealPlan, isLoading, refreshPlan } = useMealPlan();
+  const { mealPlan, setMealPlan, isLoading, refreshPlan, imageSyncStatus } = useMealPlan();
 
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -234,6 +248,21 @@ export default function Dashboard() {
             Recipes optimized for your $
             {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
+          {imageSyncStatus === "syncing" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Generating meal images in the background. This page auto-refreshes every ~10 seconds.
+            </p>
+          )}
+          {imageSyncStatus === "ready" && (
+            <p className="mt-2 text-sm text-green-700">
+              Meal images are ready.
+            </p>
+          )}
+          {imageSyncStatus === "timeout" && (
+            <p className="mt-2 text-sm text-amber-700">
+              Image generation is taking longer than expected. Use Refresh Plan to check latest status.
+            </p>
+          )}
         </div>
 
         {/* Week Selector */}
@@ -283,48 +312,51 @@ export default function Dashboard() {
 
         {/* Meal Plan Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentWeekMeals.map((meal: DashboardMeal, index: number) => (
-            <div key={meal.id || `meal-${index}`} className="h-full">
-              <Link href={`/recipe/${meal.id}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <div className="relative h-48">
-                    <ImageWithFallback
-                      src={meal.image || "/api/placeholder/400/300"}
-                      alt={meal.name || "Meal image"}
-                      className="w-full h-full object-cover"
-                    />
-                    <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-                      {meal.day}
-                    </Badge>
-                    {isImageMissing(meal.image) && (
-                      <Badge className="absolute top-3 left-3 bg-secondary text-secondary-foreground">
-                        Image Pending
+          {currentWeekMeals.map((meal: DashboardMeal, index: number) => {
+            const imageBadge = imageBadgeForMeal(meal);
+            return (
+              <div key={meal.id || `meal-${index}`} className="h-full">
+                <Link href={`/recipe/${meal.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    <div className="relative h-48">
+                      <ImageWithFallback
+                        src={meal.image || "/meal-placeholder.svg"}
+                        alt={meal.name || "Meal image"}
+                        className="w-full h-full object-cover"
+                      />
+                      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
+                        {meal.day}
                       </Badge>
-                    )}
-                  </div>
-                  <CardHeader className="pb-0 pt-4">
-                    <CardTitle className="text-xl">{meal.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">
-                      {meal.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="flex justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" /> {meal.prepTime}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4" /> {formatCurrency(meal.costPerServing ?? meal.totalCost)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Soup className="w-4 h-4" /> {meal.calories || 0} cal
-                      </div>
+                      {imageBadge && (
+                        <Badge className={`absolute top-3 left-3 ${imageBadge.className}`}>
+                          {imageBadge.label}
+                        </Badge>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
-          ))}
+                    <CardHeader className="pb-0 pt-4">
+                      <CardTitle className="text-xl">{meal.name}</CardTitle>
+                      <CardDescription className="line-clamp-2">
+                        {meal.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" /> {meal.prepTime}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="w-4 h-4" /> {formatCurrency(meal.costPerServing ?? meal.totalCost)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Soup className="w-4 h-4" /> {meal.calories || 0} cal
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
+            );
+          })}
         </div>
 
         {/* Action Buttons */}

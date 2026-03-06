@@ -167,7 +167,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         if (response.status === 504) {
           setTimedOutGeneration(true);
           throw new Error(
-            "Generation is taking longer than expected. Your request may still finish; use dashboard refresh after about 30 seconds.",
+            "Generation is taking longer than expected and may take up to ~3 minutes with the current model. Your request may still finish; use dashboard refresh after about 30 seconds.",
           );
         }
         throw new Error(detail);
@@ -198,6 +198,11 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
               "Saturday",
               "Sunday",
             ][idx % 7],
+            instructions: Array.isArray(meal.instructions)
+              ? meal.instructions
+              : typeof meal.instructions === "string"
+                ? meal.instructions
+                : "",
             totalCost: toCurrencyString(meal.costPerServing),
             costPerServing: toCurrencyString(meal.costPerServing),
             carbs: meal.carbs != null ? `${meal.carbs}g` : "0g",
@@ -209,14 +214,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         createdAt: new Date().toISOString(),
       };
 
-      // 4. Fire-and-forget: trigger backend image generation (optional)
-      fetch("/api/generate-meal-images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid }),
-      }).catch((err) => console.error("Image trigger failed:", err));
-
-      // 5. Pass generated plan to parent (Dashboard)
+      // 4. Pass generated plan to parent (Dashboard)
       onComplete(generatedMealPlan);
       
     } catch (error) {
