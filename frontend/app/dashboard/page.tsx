@@ -20,7 +20,6 @@ import {
   DollarSign,
   Calendar,
   Soup,
-  RefreshCw,
   ChefHat,
 } from "lucide-react";
 import { useAuth } from "../context/auth";
@@ -28,10 +27,48 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useMealPlan } from "../context/MealPlanContext"; // Import the context
+import type { MealPlan } from "../context/MealPlanContext";
+
+type DashboardMeal = {
+  id?: string;
+  day?: string;
+  name?: string;
+  description?: string;
+  image?: string;
+  prepTime?: string;
+  totalCost?: string;
+  costPerServing?: number | string;
+  calories?: number;
+};
+
+type DashboardWeek = {
+  weekNumber?: number;
+  meals?: DashboardMeal[];
+};
+
+const parseMoney = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.replace("$", "").trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const parseMinutes = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const formatCurrency = (value: unknown): string => `$${parseMoney(value).toFixed(2)}`;
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
-  const { mealPlan, setMealPlan } = useMealPlan();
+  const { mealPlan, setMealPlan, isLoading } = useMealPlan();
 
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -50,7 +87,7 @@ export default function Dashboard() {
   // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
-      const uid = (currentUser as any)?.uid || auth.currentUser?.uid;
+      const uid = auth.currentUser?.uid;
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
@@ -72,7 +109,7 @@ export default function Dashboard() {
   // 2. The hydration logic (useEffect) has been REMOVED.
   // It now lives in MealPlanContext.tsx to allow background processing.
 
-  const handleCreateMealPlan = (fullMealPlan: any) => {
+  const handleCreateMealPlan = (fullMealPlan: MealPlan) => {
     setMealPlan(fullMealPlan); // Updates the Global Context
     setQuestionnaireCompleted(true);
     setShowWizard(false);
@@ -83,6 +120,28 @@ export default function Dashboard() {
     setShowWizard(true);
   };
 
+  const displayName = auth.currentUser?.displayName || currentUser?.displayName;
+  const emailName = auth.currentUser?.email?.split("@")[0] || currentUser?.email?.split("@")[0] || "Chef";
+  const prefBudget =
+    mealPlan.preferences &&
+    typeof mealPlan.preferences === "object" &&
+    "monthlyBudget" in mealPlan.preferences
+      ? mealPlan.preferences.monthlyBudget
+      : mealPlan.monthlyBudget;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
+        <DashboardHeading />
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-lg text-muted-foreground">Loading your meal plan...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // GUARD CLAUSE: Show "Create" prompt if no plan exists
   if (!questionnaireCompleted || !mealPlan || !mealPlan.weeks) {
     return (
@@ -92,11 +151,11 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
-              Welcome, {(currentUser as any)?.displayName || "Chef"}!
+              Welcome, {displayName || "Chef"}!
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              It looks like you haven't generated your personalized plan yet.
-              Let's create a 4-week meal plan tailored to your budget and goals.
+              It looks like you have not generated your personalized plan yet.
+              Let&apos;s create a 4-week meal plan tailored to your budget and goals.
             </p>
             <Button
               size="lg"
@@ -118,20 +177,22 @@ export default function Dashboard() {
   }
 
   // Calculate current view data
-  const currentWeek = mealPlan.weeks[selectedWeek - 1] || { meals: [] };
+  const mealPlanWeeks = mealPlan.weeks as DashboardWeek[];
+  const currentWeek = mealPlanWeeks[selectedWeek - 1] || { meals: [] };
+  const currentWeekMeals = currentWeek.meals || [];
 
   const totalWeeklyCost =
-    currentWeek.meals?.reduce(
-      (sum: number, meal: any) =>
-        sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
+    currentWeekMeals.reduce(
+      (sum: number, meal: DashboardMeal) =>
+        sum + parseMoney(meal.costPerServing ?? meal.totalCost ?? 0),
       0,
-    ) || 0;
+    );
 
-  const avgPrepTime = currentWeek.meals?.length
-    ? currentWeek.meals.reduce(
-        (sum: number, meal: any) => sum + parseInt(String(meal.prepTime || 0)),
+  const avgPrepTime = currentWeekMeals.length
+    ? currentWeekMeals.reduce(
+        (sum: number, meal: DashboardMeal) => sum + parseMinutes(meal.prepTime),
         0,
-      ) / currentWeek.meals.length
+      ) / currentWeekMeals.length
     : 0;
 
   return (
@@ -141,13 +202,12 @@ export default function Dashboard() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
             Hello,{" "}
-            {(currentUser as any)?.displayName ||
-              (currentUser as any)?.email?.split("@")[0]}
+            {displayName || emailName}
             !
           </h1>
           <p className="text-muted-foreground">
             Recipes optimized for your $
-            {mealPlan?.preferences?.monthlyBudget || "0"}/month budget
+            {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
         </div>
 
@@ -158,18 +218,21 @@ export default function Dashboard() {
             <h2 className="text-xl">Select Week</h2>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {mealPlan.weeks.map((week: any) => (
+            {mealPlanWeeks.map((week: DashboardWeek, index: number) => {
+              const weekNumber = week.weekNumber || index + 1;
+              return (
               <Button
-                key={week.weekNumber}
+                key={weekNumber}
                 variant={
-                  selectedWeek === week.weekNumber ? "default" : "outline"
+                  selectedWeek === weekNumber ? "default" : "outline"
                 }
-                onClick={() => setSelectedWeek(week.weekNumber)}
-                className={selectedWeek === week.weekNumber ? "bg-primary" : ""}
+                onClick={() => setSelectedWeek(weekNumber)}
+                className={selectedWeek === weekNumber ? "bg-primary" : ""}
               >
-                Week {week.weekNumber}
+                Week {weekNumber}
               </Button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -195,55 +258,41 @@ export default function Dashboard() {
 
         {/* Meal Plan Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentWeek.meals.map((meal: any, index: number) => (
+          {currentWeekMeals.map((meal: DashboardMeal, index: number) => (
             <div key={meal.id || `meal-${index}`} className="h-full">
-              {meal.status === "pending" ? (
-                /* PROGRESSIVE LOADING CARD */
-                <Card className="overflow-hidden border-dashed border-2 flex flex-col items-center justify-center p-12 h-full bg-muted/20">
-                  <RefreshCw className="w-8 h-8 text-muted-foreground animate-spin mb-4" />
-                  <h3 className="font-medium text-muted-foreground text-center">
-                    Drafting {meal.name}...
-                  </h3>
-                  <p className="text-xs text-muted-foreground/60 text-center mt-2">
-                    AI is calculating ingredients & costs
-                  </p>
-                </Card>
-              ) : (
-                /* COMPLETED MEAL CARD */
-                <Link href={`/recipe/${meal.id}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <div className="relative h-48">
-                      <ImageWithFallback
-                        src={meal.image || "/api/placeholder/400/300"}
-                        alt={meal.name}
-                        className="w-full h-full object-cover"
-                      />
-                      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-                        {meal.day}
-                      </Badge>
-                    </div>
-                    <CardHeader className="pb-0 pt-4">
-                      <CardTitle className="text-xl">{meal.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {meal.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {meal.prepTime}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" /> {meal.totalCost}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Soup className="w-4 h-4" /> {meal.calories} cal
-                        </div>
+              <Link href={`/recipe/${meal.id}`}>
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                  <div className="relative h-48">
+                    <ImageWithFallback
+                      src={meal.image || "/api/placeholder/400/300"}
+                      alt={meal.name || "Meal image"}
+                      className="w-full h-full object-cover"
+                    />
+                    <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
+                      {meal.day}
+                    </Badge>
+                  </div>
+                  <CardHeader className="pb-0 pt-4">
+                    <CardTitle className="text-xl">{meal.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {meal.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" /> {meal.prepTime}
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              )}
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="w-4 h-4" /> {formatCurrency(meal.costPerServing ?? meal.totalCost)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Soup className="w-4 h-4" /> {meal.calories || 0} cal
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
           ))}
         </div>
