@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { getApps, initializeApp } from "firebase/app";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -18,20 +18,28 @@ import {
   collection,
   addDoc,
   getDocs,
+  query,
+  orderBy,
+  limit,
   deleteDoc,
 } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_apiKey,
-  authDomain: process.env.NEXT_PUBLIC_authDomain,
-  projectId: process.env.NEXT_PUBLIC_projectId,
-  storageBucket: process.env.NEXT_PUBLIC_storageBucket,
-  messagingSenderId: process.env.NEXT_PUBLIC_messagingSenderId,
-  appId: process.env.NEXT_PUBLIC_appId,
-  measurementId: process.env.NEXT_PUBLIC_measurementId,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || process.env.NEXT_PUBLIC_apiKey,
+  authDomain:
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.NEXT_PUBLIC_authDomain,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_projectId,
+  storageBucket:
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_storageBucket,
+  messagingSenderId:
+    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+    process.env.NEXT_PUBLIC_messagingSenderId,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || process.env.NEXT_PUBLIC_appId,
+  measurementId:
+    process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || process.env.NEXT_PUBLIC_measurementId,
 };
 
-const app = initializeApp(firebaseConfig);
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
@@ -139,15 +147,30 @@ export const uploadMealPlanToUser = async (uid, mealPlan) => {
 
   try {
     const userRef = doc(db, "users", uid);
+    const plansRef = collection(db, "users", uid, "plans");
+    const nowIso = new Date().toISOString();
     
-    // We save the entire object into one field called 'currentMealPlan'
-    // This makes 'Delete and Re-add' unnecessary and prevents duplication.
-    await updateDoc(userRef, {
-      currentMealPlan: {
-        ...mealPlan,
-        updatedAt: new Date().toISOString()
-      }
+    // Primary aligned write path: users/{uid}/plans/{planId}
+    await addDoc(plansRef, {
+      ...mealPlan,
+      status: mealPlan.status || "ready",
+      createdAt: nowIso,
+      updatedAt: nowIso,
     });
+
+    // Backward-compatible mirror to legacy field.
+    await setDoc(
+      userRef,
+      {
+        uid,
+        currentMealPlan: {
+          ...mealPlan,
+          updatedAt: nowIso,
+        },
+        updatedAt: nowIso,
+      },
+      { merge: true },
+    );
 
     console.log("Meal plan synced successfully.");
   } catch (error) {
@@ -160,11 +183,18 @@ export const loadMealPlanFromFirestore = async (uid) => {
   if (!uid) return null;
 
   try {
+    const plansRef = collection(db, "users", uid, "plans");
+    const latestPlanQuery = query(plansRef, orderBy("createdAt", "desc"), limit(1));
+    const planSnap = await getDocs(latestPlanQuery);
+
+    if (!planSnap.empty) {
+      return planSnap.docs[0].data();
+    }
+
+    // Backward-compatible fallback.
     const userSnap = await getDoc(doc(db, "users", uid));
-    
     if (userSnap.exists()) {
       const data = userSnap.data();
-      // Look for the single object we saved
       return data.currentMealPlan || null;
     }
     return null;

@@ -35,12 +35,12 @@ def update_global_stats(new_rating: int):
     new_count = current.get("totalRatingCount", 0) + 1
     new_avg = new_sum / new_count
 
-    stats_ref.update({
+    stats_ref.set({
         "totalRatingSum": new_sum,
         "totalRatingCount": new_count,
         "globalAvg": new_avg,
         "updatedAt": fs.SERVER_TIMESTAMP,
-    })
+    }, merge=True)
 
 def compute_bayesian_score(R: float, v: int, m: float, C: int) -> float:
     '''

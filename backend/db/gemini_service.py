@@ -72,6 +72,8 @@ Rules:
 - Strictly exclude allergens listed above.
 - Keep meals diverse across the month.
 - Include practical ingredient measurements.
+- Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
+- Do not invent, rename, singularize, or pluralize ingredient IDs between sections.
 - Return only raw JSON with no markdown.
 
 Return JSON with this exact top-level shape:
@@ -144,21 +146,44 @@ def _generate_raw_response(prompt: str) -> str:
     if not api_key:
         raise ValueError("GEMINI_API_KEY not set in environment variables")
 
-    from google import genai
-    from google.genai import types
+    # Preferred SDK path (google-genai).
+    try:
+        from google import genai
+        from google.genai import types
 
-    client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.2,
-        ),
-    )
-    if not getattr(response, "text", None):
-        raise ValueError("Gemini returned an empty response body")
-    return response.text
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.2,
+            ),
+        )
+        if not getattr(response, "text", None):
+            raise ValueError("Gemini returned an empty response body")
+        return response.text
+    except Exception as primary_exc:
+        # Compatibility fallback for environments that only have google-generativeai.
+        try:
+            import google.generativeai as legacy_genai
+
+            legacy_genai.configure(api_key=api_key)
+            model = legacy_genai.GenerativeModel(
+                GEMINI_MODEL,
+                generation_config={"response_mime_type": "application/json", "temperature": 0.2},
+            )
+            response = model.generate_content(prompt)
+            text = getattr(response, "text", None)
+            if not text:
+                raise ValueError("Gemini returned an empty response body")
+            return text
+        except Exception as fallback_exc:
+            raise ValueError(
+                "Failed to initialize Gemini SDK. Install `google-genai` or "
+                "`google-generativeai`. "
+                f"primary={primary_exc}; fallback={fallback_exc}"
+            ) from fallback_exc
 
 
 def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
