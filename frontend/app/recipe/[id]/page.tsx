@@ -129,6 +129,8 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
   };
 
   const detailedRecipe = generateRecipeDetails(recipe);
+  const imagePending =
+    !detailedRecipe.image || String(detailedRecipe.image).startsWith('/api/placeholder');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
@@ -159,6 +161,11 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                 className="w-full h-full object-cover"
               />
             </div>
+            {imagePending && (
+              <p className="text-sm text-muted-foreground">
+                Meal image is still being generated. A fallback image is shown for now.
+              </p>
+            )}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">

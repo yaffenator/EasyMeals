@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { auth } from "../firebase";
 
@@ -111,6 +111,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const imageTriggerByPlan = useRef<Set<string>>(new Set());
 
   const fetchLatestPlan = useCallback(async () => {
     const uid = auth.currentUser?.uid;
@@ -157,6 +158,33 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
     });
     return unsubscribe;
   }, [fetchLatestPlan]);
+
+  useEffect(() => {
+    if (!mealPlan) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const planKey = mealPlan.planId || `anon-${mealPlan.createdAt || "unknown"}`;
+    if (imageTriggerByPlan.current.has(planKey)) return;
+
+    const hasMissingImage = mealPlan.weeks.some((week) =>
+      week.meals.some((meal) => {
+        const src = typeof meal.image === "string" ? meal.image.trim() : "";
+        return !src || src.startsWith("/api/placeholder");
+      }),
+    );
+
+    if (!hasMissingImage) return;
+    imageTriggerByPlan.current.add(planKey);
+
+    fetch("/api/generate-meal-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uid }),
+    }).catch((err) => {
+      console.error("Failed to trigger image generation job:", err);
+    });
+  }, [mealPlan]);
 
   return (
     <MealPlanContext.Provider

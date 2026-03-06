@@ -65,6 +65,11 @@ const parseMinutes = (value: unknown): number => {
 };
 
 const formatCurrency = (value: unknown): string => `$${parseMoney(value).toFixed(2)}`;
+const isImageMissing = (value: unknown): boolean => {
+  if (typeof value !== "string") return true;
+  const trimmed = value.trim();
+  return !trimmed || trimmed.startsWith("/api/placeholder");
+};
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
@@ -271,6 +276,11 @@ export default function Dashboard() {
                     <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
                       {meal.day}
                     </Badge>
+                    {isImageMissing(meal.image) && (
+                      <Badge className="absolute top-3 left-3 bg-secondary text-secondary-foreground">
+                        Image Pending
+                      </Badge>
+                    )}
                   </div>
                   <CardHeader className="pb-0 pt-4">
                     <CardTitle className="text-xl">{meal.name}</CardTitle>
