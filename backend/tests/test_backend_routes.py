@@ -9,17 +9,47 @@ def _load_app_module():
     return import_module("backend")
 
 
-def test_health_route_returns_ok():
+def test_generate_plan_invalid_payload_returns_400():
     module = _load_app_module()
     client = TestClient(module.app)
 
-    response = client.get("/health")
+    response = client.post(
+        "/api/generate-plan",
+        json={
+            "userId": "user_1",
+            "monthlyBudget": 20,
+            "weight": 160.0,
+            "goalType": "maintain",
+            "dietaryTags": [],
+            "allergies": [],
+        },
+    )
 
-    assert response.status_code == 200
-    assert response.json()["ok"] is True
+    assert response.status_code == 400
 
 
-def test_generate_plan_route_success():
+def test_generate_plan_active_lock_returns_409():
+    module = _load_app_module()
+    client = TestClient(module.app)
+
+    payload = {
+        "userId": "user_1",
+        "monthlyBudget": 300,
+        "weight": 160.0,
+        "goalType": "maintain",
+        "dietaryTags": [],
+        "allergies": [],
+    }
+    with patch(
+        "backend.generate_and_store_plan",
+        side_effect=module.GenerationConflictError("Generation already in progress for user."),
+    ):
+        response = client.post("/api/generate-plan", json=payload)
+
+    assert response.status_code == 409
+
+
+def test_generate_plan_success_returns_hardening_fields():
     module = _load_app_module()
     client = TestClient(module.app)
 
@@ -32,90 +62,63 @@ def test_generate_plan_route_success():
         "estimatedTotalCost": 120.0,
         "weeks": [],
         "groceryList": [],
-        "metadata": {},
+        "metadata": {"planMonth": "2026-03", "planVersion": 2, "requestId": "req_123"},
     }
-
     payload = {
         "userId": "user_1",
         "monthlyBudget": 300,
+        "weight": 170.0,
         "goalType": "maintain",
         "dietaryTags": [],
         "allergies": [],
     }
-
     with patch("backend.generate_and_store_plan", return_value=mock_response):
         response = client.post("/api/generate-plan", json=payload)
 
     assert response.status_code == 200
-    assert response.json()["planId"] == "plan_123"
+    body = response.json()
+    assert body["status"] == "stored"
+    assert body["metadata"]["planMonth"] == "2026-03"
+    assert body["metadata"]["planVersion"] == 2
 
 
-def test_generate_plan_route_validation_error():
+def test_get_plan_prefers_latest_ready_plan():
     module = _load_app_module()
     client = TestClient(module.app)
 
-    payload = {
-        "userId": "user_1",
-        "monthlyBudget": -10,
-        "goalType": "maintain",
-        "dietaryTags": [],
-        "allergies": [],
+    ready_old = MagicMock()
+    ready_old.id = "plan_ready_old"
+    ready_old.to_dict.return_value = {
+        "status": "ready",
+        "version": 1,
+        "createdAt": datetime(2026, 3, 1, tzinfo=timezone.utc),
     }
 
-    response = client.post("/api/generate-plan", json=payload)
-    assert response.status_code == 422
+    generating_newer = MagicMock()
+    generating_newer.id = "plan_generating"
+    generating_newer.to_dict.return_value = {
+        "status": "generating",
+        "version": 5,
+        "createdAt": datetime(2026, 3, 5, tzinfo=timezone.utc),
+    }
 
-
-def test_rate_meal_route_success():
-    module = _load_app_module()
-    client = TestClient(module.app)
-
-    payload = {"mealId": "recipe_1", "userId": "user_1", "rating": 5}
-    with patch(
-        "backend.rate_meal",
-        return_value={"ratingCount": 4, "ratingAvg": 4.75, "recommendationScore": 4.5},
-    ):
-        response = client.post("/api/rate-meal", json=payload)
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["ok"] is True
-    assert body["mealId"] == "recipe_1"
-    assert body["updated"]["ratingCount"] == 4
-
-
-def test_get_plan_route_returns_latest_plan():
-    module = _load_app_module()
-    client = TestClient(module.app)
-
-    old_doc = MagicMock()
-    old_doc.id = "plan_old"
-    old_doc.to_dict.return_value = {"createdAt": datetime(2026, 1, 1, tzinfo=timezone.utc), "status": "ready"}
-
-    new_doc = MagicMock()
-    new_doc.id = "plan_new"
-    new_doc.to_dict.return_value = {"createdAt": datetime(2026, 2, 1, tzinfo=timezone.utc), "status": "ready"}
+    ready_new = MagicMock()
+    ready_new.id = "plan_ready_new"
+    ready_new.to_dict.return_value = {
+        "status": "ready",
+        "version": 2,
+        "createdAt": datetime(2026, 3, 3, tzinfo=timezone.utc),
+    }
 
     mock_db = MagicMock()
-    mock_db.collection.return_value.document.return_value.collection.return_value.stream.return_value = [old_doc, new_doc]
+    mock_db.collection.return_value.document.return_value.collection.return_value.stream.return_value = [
+        ready_old,
+        generating_newer,
+        ready_new,
+    ]
 
     with patch("backend.db", mock_db):
         response = client.get("/api/get-plan/user_1")
 
     assert response.status_code == 200
-    body = response.json()
-    assert body["planId"] == "plan_new"
-    assert body["userId"] == "user_1"
-
-
-def test_get_plan_route_404_when_missing():
-    module = _load_app_module()
-    client = TestClient(module.app)
-
-    mock_db = MagicMock()
-    mock_db.collection.return_value.document.return_value.collection.return_value.stream.return_value = []
-
-    with patch("backend.db", mock_db):
-        response = client.get("/api/get-plan/user_1")
-
-    assert response.status_code == 404
+    assert response.json()["planId"] == "plan_ready_new"

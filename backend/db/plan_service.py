@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from google.cloud import firestore as fs
 
 from db.firestore_client import db
@@ -18,10 +20,29 @@ from db.ingredient_service import recalculate_meal_cost
 
 class PlanGenerationRequest(BaseModel):
     userId: str
-    monthlyBudget: float = Field(gt=0)
+    monthlyBudget: float = Field(ge=50, le=1000)
+    weight: float = Field(ge=100, le=380)
     goalType: str
     dietaryTags: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
+
+    @field_validator("monthlyBudget")
+    @classmethod
+    def validate_budget_precision(cls, value: float) -> float:
+        if not _has_max_decimals(value, 2):
+            raise ValueError("monthlyBudget must have at most 2 decimal places")
+        return value
+
+    @field_validator("weight")
+    @classmethod
+    def validate_weight_precision(cls, value: float) -> float:
+        if not _has_max_decimals(value, 1):
+            raise ValueError("weight must have at most 1 decimal place")
+        return value
+
+
+class GenerationConflictError(ValueError):
+    pass
 
 
 class GroceryListItem(BaseModel):
@@ -57,6 +78,155 @@ TODO_FLOW = [
     "Aggregate grocery list by ingredient and normalized unit.",
     "Persist users/{uid}/plans/{planId} and update mealHistory.",
 ]
+
+
+def _has_max_decimals(value: float, max_decimals: int) -> bool:
+    try:
+        d = Decimal(str(value))
+    except InvalidOperation:
+        return False
+    exponent = d.as_tuple().exponent
+    decimals = -exponent if exponent < 0 else 0
+    return decimals <= max_decimals
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _shift_month(month_yyyy_mm: str, delta_months: int) -> str:
+    year, month = [int(part) for part in month_yyyy_mm.split("-")]
+    month_index = (year * 12 + (month - 1)) + delta_months
+    out_year = month_index // 12
+    out_month = (month_index % 12) + 1
+    return f"{out_year:04d}-{out_month:02d}"
+
+
+def resolve_target_month(user_id: str) -> str:
+    current_month = _utcnow().strftime("%Y-%m")
+    plans_ref = db.collection("users").document(user_id).collection("plans")
+    ready_docs = list(plans_ref.where("status", "==", "ready").stream())
+    if not ready_docs:
+        return current_month
+
+    ready_months = [(doc.to_dict() or {}).get("planMonth") for doc in ready_docs]
+    ready_months = [m for m in ready_months if isinstance(m, str) and len(m) == 7]
+    if not ready_months:
+        return _shift_month(current_month, 1)
+    latest_ready_month = max(ready_months)
+    base_month = max(current_month, latest_ready_month)
+    return _shift_month(base_month, 1)
+
+
+def get_next_plan_version(user_id: str, target_month: str) -> int:
+    plans_ref = db.collection("users").document(user_id).collection("plans")
+    same_month_docs = list(plans_ref.where("planMonth", "==", target_month).stream())
+    versions = []
+    for doc in same_month_docs:
+        version = (doc.to_dict() or {}).get("version")
+        if isinstance(version, int):
+            versions.append(version)
+    return (max(versions) if versions else 0) + 1
+
+
+def acquire_generation_lock(user_id: str, target_month: str, timeout_minutes: int = 10) -> tuple[str, datetime]:
+    if db is None:
+        raise ValueError("Firestore client is not initialized.")
+
+    user_ref = db.collection("users").document(user_id)
+    now = _utcnow()
+    lock_expires_at = now + timedelta(minutes=timeout_minutes)
+    request_id = uuid4().hex
+    transaction = db.transaction()
+
+    _acquire_generation_lock_txn(
+        transaction,
+        user_ref,
+        user_id,
+        request_id,
+        target_month,
+        now,
+        lock_expires_at,
+    )
+    print(f"[plan_service] lock acquired user={user_id} request_id={request_id} month={target_month}")
+    return request_id, lock_expires_at
+
+
+def release_generation_lock(user_id: str, request_id: str, final_status: str) -> None:
+    if db is None:
+        return
+
+    user_ref = db.collection("users").document(user_id)
+    transaction = db.transaction()
+    _release_generation_lock_txn(transaction, user_ref, request_id, final_status)
+    print(f"[plan_service] lock released user={user_id} request_id={request_id} final={final_status}")
+
+
+@fs.transactional
+def _acquire_generation_lock_txn(
+    transaction: Any,
+    user_ref: Any,
+    user_id: str,
+    request_id: str,
+    target_month: str,
+    now: datetime,
+    lock_expires_at: datetime,
+) -> None:
+    user_doc = user_ref.get(transaction=transaction)
+    user_data = user_doc.to_dict() or {}
+    active = user_data.get("activeGeneration") or {}
+    status = active.get("status")
+    expires_at = active.get("expiresAt")
+    if isinstance(expires_at, datetime) and expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if status == "running" and isinstance(expires_at, datetime) and expires_at > now:
+        raise GenerationConflictError("Generation already in progress for user.")
+
+    transaction.set(
+        user_ref,
+        {
+            "uid": user_id,
+            "activeGeneration": {
+                "status": "running",
+                "requestId": request_id,
+                "startedAt": now,
+                "expiresAt": lock_expires_at,
+                "targetMonth": target_month,
+            },
+            "updatedAt": fs.SERVER_TIMESTAMP,
+            "createdAt": fs.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
+
+
+@fs.transactional
+def _release_generation_lock_txn(
+    transaction: Any,
+    user_ref: Any,
+    request_id: str,
+    final_status: str,
+) -> None:
+    user_doc = user_ref.get(transaction=transaction)
+    active = (user_doc.to_dict() or {}).get("activeGeneration") or {}
+    active_request_id = active.get("requestId")
+    if active_request_id and active_request_id != request_id:
+        return
+
+    transaction.set(
+        user_ref,
+        {
+            "activeGeneration": {
+                "status": "idle",
+                "requestId": request_id,
+                "releasedAt": _utcnow(),
+                "finalStatus": final_status,
+            },
+            "updatedAt": fs.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
 
 
 def upsert_ingredient_prices(ingredient_prices: dict[str, Any]) -> dict[str, str]:
@@ -502,6 +672,12 @@ def persist_user_plan(
     weeks: list[PlanWeek],
     grocery_list: list[GroceryListItem],
     estimated_total_cost: float,
+    *,
+    plan_month: str,
+    version: int,
+    request_id: str,
+    status: str,
+    superseded_by: str | None = None,
 ) -> None:
     user_ref = db.collection("users").document(user_id)
     user_ref.set(
@@ -512,6 +688,7 @@ def persist_user_plan(
                 "allergies": request.allergies,
                 "goal": request.goalType,
                 "monthlyBudget": request.monthlyBudget,
+                "weight": request.weight,
                 "version": 1,
                 "updatedAt": fs.SERVER_TIMESTAMP,
             },
@@ -525,11 +702,16 @@ def persist_user_plan(
     weeks_payload = [week.model_dump() for week in weeks]
     plan_payload = {
         "monthlyBudget": request.monthlyBudget,
+        "weight": request.weight,
         "goalType": request.goalType,
         "dietaryTags": request.dietaryTags,
         "allergies": request.allergies,
         "estimatedTotalCost": estimated_total_cost,
-        "status": "ready",
+        "status": status,
+        "planMonth": plan_month,
+        "version": version,
+        "requestId": request_id,
+        "supersededBy": superseded_by,
         "weeks": weeks_payload,
         "groceryList": [item.model_dump() for item in grocery_list],
         "createdAt": fs.SERVER_TIMESTAMP,
@@ -558,6 +740,28 @@ def persist_user_plan(
                     "updatedAt": fs.SERVER_TIMESTAMP,
                 }
             )
+
+
+def update_plan_status(user_id: str, plan_id: str, status: str, superseded_by: str | None = None) -> None:
+    payload: dict[str, Any] = {"status": status, "updatedAt": fs.SERVER_TIMESTAMP}
+    if superseded_by is not None:
+        payload["supersededBy"] = superseded_by
+    db.collection("users").document(user_id).collection("plans").document(plan_id).set(payload, merge=True)
+
+
+def supersede_ready_plans_for_month(user_id: str, plan_month: str, new_plan_id: str) -> int:
+    plans_ref = db.collection("users").document(user_id).collection("plans")
+    docs = list(plans_ref.where("planMonth", "==", plan_month).where("status", "==", "ready").stream())
+    updated = 0
+    for doc in docs:
+        if doc.id == new_plan_id:
+            continue
+        doc.reference.set(
+            {"status": "superseded", "supersededBy": new_plan_id, "updatedAt": fs.SERVER_TIMESTAMP},
+            merge=True,
+        )
+        updated += 1
+    return updated
 
 
 def append_meal_history(user_id: str, plan_id: str, meals: list[dict[str, Any]]) -> int:
@@ -594,70 +798,74 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     if db is None:
         raise ValueError("Firestore client is not initialized.")
 
+    plan_id = f"plan_{uuid4().hex}"
+    target_month = resolve_target_month(request.userId)
+    plan_version = get_next_plan_version(request.userId, target_month)
+    request_id = ""
+    lock_final_status = "failed"
+
+    try:
+        request_id, _expires_at = acquire_generation_lock(request.userId, target_month, timeout_minutes=10)
+    except GenerationConflictError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Failed to acquire generation lock: {exc}") from exc
+
     preferences = {
         "userId": request.userId,
         "monthlyBudget": request.monthlyBudget,
+        "weight": request.weight,
         "goalType": request.goalType,
         "dietaryTags": request.dietaryTags,
         "allergies": request.allergies,
     }
 
     try:
+        # Create a generating placeholder plan first.
+        persist_user_plan(
+            user_id=request.userId,
+            plan_id=plan_id,
+            request=request,
+            weeks=[],
+            grocery_list=[],
+            estimated_total_cost=0.0,
+            plan_month=target_month,
+            version=plan_version,
+            request_id=request_id,
+            status="generating",
+        )
+
         gemini_response = generate_meal_plan(preferences)
-    except Exception as exc:
-        raise ValueError(f"Failed to generate validated Gemini meal plan: {exc}") from exc
 
-    try:
         ingredient_id_map = upsert_ingredient_prices(gemini_response.ingredientPrices)
-    except Exception as exc:
-        raise ValueError(f"Failed to upsert ingredient prices from Gemini response: {exc}") from exc
+        ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
+        price_hint_map = build_price_hint_map(gemini_response.ingredientPrices)
 
-    ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
-    price_hint_map = build_price_hint_map(gemini_response.ingredientPrices)
-
-    try:
         processed_meals, estimated_total_cost = recalculate_meal_costs(
             gemini_response.mealPlan,
             ingredient_id_map,
             ingredient_name_map,
             price_hint_map,
         )
-    except Exception as exc:
-        raise ValueError(f"Failed to recalculate meal costs server-side: {exc}") from exc
 
-    try:
         deduped_meals, recipe_stats = dedupe_or_create_recipes(processed_meals)
-    except Exception as exc:
-        raise ValueError(f"Failed to deduplicate or create recipes: {exc}") from exc
 
-    try:
         selected_meals, diversity_stats = apply_diversity_selection(
             user_id=request.userId,
             deduped_meals=deduped_meals,
             target_count=len(deduped_meals),
         )
-    except Exception as exc:
-        raise ValueError(f"Failed to apply diversity scoring: {exc}") from exc
 
-    try:
         budgeted_meals, budget_stats = enforce_budget_with_swaps(
             selected_meals=selected_meals,
             candidate_pool=deduped_meals,
             monthly_budget=request.monthlyBudget,
         )
-    except Exception as exc:
-        raise ValueError(f"Failed to enforce monthly budget: {exc}") from exc
 
-    try:
         grocery_list = aggregate_grocery_list(budgeted_meals)
-    except Exception as exc:
-        raise ValueError(f"Failed to aggregate grocery list: {exc}") from exc
+        final_total_cost = _total_cost(budgeted_meals)
+        weeks = chunk_meals_into_weeks(budgeted_meals)
 
-    final_total_cost = _total_cost(budgeted_meals)
-    weeks = chunk_meals_into_weeks(budgeted_meals)
-
-    plan_id = f"plan_{uuid4().hex}"
-    try:
         persist_user_plan(
             user_id=request.userId,
             plan_id=plan_id,
@@ -665,46 +873,62 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             weeks=weeks,
             grocery_list=grocery_list,
             estimated_total_cost=final_total_cost,
+            plan_month=target_month,
+            version=plan_version,
+            request_id=request_id,
+            status="ready",
         )
-    except Exception as exc:
-        raise ValueError(f"Failed to persist generated plan: {exc}") from exc
+        superseded_count = supersede_ready_plans_for_month(request.userId, target_month, plan_id)
 
-    try:
         meal_history_added = append_meal_history(
             user_id=request.userId,
             plan_id=plan_id,
             meals=budgeted_meals,
         )
-    except Exception as exc:
-        raise ValueError(f"Failed to append meal history: {exc}") from exc
 
-    return PlanGenerationResponse(
-        userId=request.userId,
-        planId=plan_id,
-        status="stored",
-        monthlyBudget=request.monthlyBudget,
-        estimatedTotalCost=final_total_cost,
-        weeks=weeks,
-        groceryList=grocery_list,
-        metadata={
-            "implementedStep": 9,
-            "mealCount": len(gemini_response.mealPlan),
-            "ingredientPriceCount": len(gemini_response.ingredientPrices),
-            "ingredientMappingCount": len(set(ingredient_id_map.values())),
-            "ingredientIdMap": ingredient_id_map,
-            "recalculatedMealCount": len(processed_meals),
-            "recipesCreated": recipe_stats["recipesCreated"],
-            "recipesReused": recipe_stats["recipesReused"],
-            "diversityScoredCount": diversity_stats["scoredCount"],
-            "diversitySelectedCount": diversity_stats["selectedCount"],
-            "budgetExceededInitially": budget_stats["budgetExceededInitially"],
-            "budgetSwapsApplied": budget_stats["swapsApplied"],
-            "budgetMealsDropped": budget_stats["mealsDropped"],
-            "budgetMet": budget_stats["budgetMet"],
-            "preBudgetEstimatedTotalCost": estimated_total_cost,
-            "groceryItemCount": len(grocery_list),
-            "mealHistoryAdded": meal_history_added,
-            "planPath": f"users/{request.userId}/plans/{plan_id}",
-            "todoFlow": TODO_FLOW,
-        },
-    )
+        lock_final_status = "ready"
+        return PlanGenerationResponse(
+            userId=request.userId,
+            planId=plan_id,
+            status="stored",
+            monthlyBudget=request.monthlyBudget,
+            estimatedTotalCost=final_total_cost,
+            weeks=weeks,
+            groceryList=grocery_list,
+            metadata={
+                "implementedStep": 9,
+                "requestId": request_id,
+                "planMonth": target_month,
+                "planVersion": plan_version,
+                "mealCount": len(gemini_response.mealPlan),
+                "ingredientPriceCount": len(gemini_response.ingredientPrices),
+                "ingredientMappingCount": len(set(ingredient_id_map.values())),
+                "ingredientIdMap": ingredient_id_map,
+                "recalculatedMealCount": len(processed_meals),
+                "recipesCreated": recipe_stats["recipesCreated"],
+                "recipesReused": recipe_stats["recipesReused"],
+                "diversityScoredCount": diversity_stats["scoredCount"],
+                "diversitySelectedCount": diversity_stats["selectedCount"],
+                "budgetExceededInitially": budget_stats["budgetExceededInitially"],
+                "budgetSwapsApplied": budget_stats["swapsApplied"],
+                "budgetMealsDropped": budget_stats["mealsDropped"],
+                "budgetMet": budget_stats["budgetMet"],
+                "preBudgetEstimatedTotalCost": estimated_total_cost,
+                "groceryItemCount": len(grocery_list),
+                "mealHistoryAdded": meal_history_added,
+                "supersededPlansCount": superseded_count,
+                "planPath": f"users/{request.userId}/plans/{plan_id}",
+                "todoFlow": TODO_FLOW,
+            },
+        )
+    except Exception as exc:
+        try:
+            update_plan_status(request.userId, plan_id, "failed")
+        except Exception:
+            pass
+        if isinstance(exc, ValueError):
+            raise
+        raise ValueError(f"Failed to generate/store plan: {exc}") from exc
+    finally:
+        if request_id:
+            release_generation_lock(request.userId, request_id, lock_final_status)
