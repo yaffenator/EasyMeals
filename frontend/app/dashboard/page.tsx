@@ -128,11 +128,12 @@ export default function Dashboard() {
   const displayName = auth.currentUser?.displayName || currentUser?.displayName;
   const emailName = auth.currentUser?.email?.split("@")[0] || currentUser?.email?.split("@")[0] || "Chef";
   const prefBudget =
+    mealPlan &&
     mealPlan.preferences &&
     typeof mealPlan.preferences === "object" &&
     "monthlyBudget" in mealPlan.preferences
       ? mealPlan.preferences.monthlyBudget
-      : mealPlan.monthlyBudget;
+      : mealPlan?.monthlyBudget;
 
   if (isLoading) {
     return (
