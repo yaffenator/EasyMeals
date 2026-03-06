@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/dashboard-heading';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -11,26 +11,28 @@ import { Clock, DollarSign, Users, ChefHat, ArrowLeft, Flame, Loader2, Lightbulb
 import { useMealPlan } from '../../context/MealPlanContext'; // Import the context
 import { generateRecipeDetails } from '../../utils/recipeDetails';
 import Link from 'next/link';
+import { auth } from '../../firebase';
 
 export default function Recipe({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [ratingSuccess, setRatingSuccess] = useState<string | null>(null);
   
   // 1. Grab the global mealPlan and the loading status from context
-  const { mealPlan } = useMealPlan();
+  const { mealPlan, setMealPlan } = useMealPlan();
 
-  // 2. Find the recipe directly from the global state
-  // This is reactive: if status changes from 'pending' to 'completed' in the background, 
-  // this variable updates and the UI re-renders automatically.
-  let recipe = null;
-  if (mealPlan) {
+  const recipe = useMemo(() => {
+    if (!mealPlan) return null;
     for (const week of mealPlan.weeks) {
-      recipe = week.meals.find((meal: any) => meal.id === id) || null;
-      if (recipe) break;
+      const found = week.meals.find((meal: Record<string, unknown>) => meal.id === id) || null;
+      if (found) return found;
     }
-  }
+    return null;
+  }, [mealPlan, id]);
 
-  // 3. Handle navigation if the recipe truly doesn't exist
+  // 2. Handle navigation if the recipe truly doesn't exist
   useEffect(() => {
     // Only redirect if we have a mealPlan loaded and still can't find the ID
     if (mealPlan && !recipe) {
@@ -38,7 +40,7 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     }
   }, [mealPlan, recipe, router]);
 
-  // 4. Loading state for initial data fetch
+  // 3. Loading state for initial data fetch
   if (!mealPlan) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -47,20 +49,15 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     );
   }
 
-  // 5. "Still Generating" state
-  // Because we use the global context, as soon as the background worker 
-  // finishes this meal, this 'if' will become false and the recipe will pop in!
-  if (!recipe || recipe.status === 'pending') {
+  if (!recipe) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
         <Header />
         <main className="container mx-auto px-4 py-16 text-center">
           <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-sm border">
-            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-primary">Chef is Writing the Recipe...</h1>
+            <h1 className="text-2xl font-bold text-primary">Recipe Not Found</h1>
             <p className="text-muted-foreground mt-2">
-              We are calculating the exact ingredients and costs for <b>{recipe?.name || 'this meal'}</b>. 
-              This page will update automatically.
+              This meal was not found in your current plan.
             </p>
             <Link href="/dashboard">
               <Button variant="outline" className="mt-6">Back to Dashboard</Button>
@@ -70,6 +67,66 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
       </div>
     );
   }
+
+  const handleRateMeal = async (rating: number) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      setRatingError('You must be signed in to rate a meal.');
+      return;
+    }
+    if (!recipe?.id || typeof recipe.id !== 'string') {
+      setRatingError('This recipe cannot be rated because the meal ID is missing.');
+      return;
+    }
+
+    setIsSubmittingRating(true);
+    setRatingError(null);
+    setRatingSuccess(null);
+
+    try {
+      const response = await fetch('/api/plan/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mealId: recipe.id,
+          userId: uid,
+          rating,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.detail || 'Failed to submit meal rating.');
+      }
+
+      setMealPlan((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          weeks: prev.weeks.map((week) => ({
+            ...week,
+            meals: week.meals.map((meal: Record<string, unknown>) =>
+              meal.id === recipe.id
+                ? {
+                    ...meal,
+                    ratingAvg: payload?.updated?.ratingAvg ?? meal.ratingAvg,
+                    ratingCount: payload?.updated?.ratingCount ?? meal.ratingCount,
+                    recommendationScore:
+                      payload?.updated?.recommendationScore ?? meal.recommendationScore,
+                  }
+                : meal,
+            ),
+          })),
+        };
+      });
+
+      setRatingSuccess(`Thanks! You rated this meal ${rating}/5.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to submit meal rating.';
+      setRatingError(message);
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
 
   const detailedRecipe = generateRecipeDetails(recipe);
 
@@ -196,6 +253,35 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">No extra tips for this recipe.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-primary">Rate This Meal</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Your rating improves future recommendations.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <Button
+                      key={score}
+                      variant="outline"
+                      onClick={() => handleRateMeal(score)}
+                      disabled={isSubmittingRating}
+                    >
+                      {score}
+                    </Button>
+                  ))}
+                </div>
+                {ratingSuccess && (
+                  <p className="mt-3 text-sm text-green-700">{ratingSuccess}</p>
+                )}
+                {ratingError && (
+                  <p className="mt-3 text-sm text-red-700">{ratingError}</p>
                 )}
               </CardContent>
             </Card>
