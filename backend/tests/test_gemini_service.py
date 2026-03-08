@@ -18,7 +18,7 @@ def _valid_payload():
                 "cookTime": "10 minutes",
                 "servings": 1,
                 "costPerServing": 2.25,
-                "mealType": "Breakfast",
+                "mealType": "Dinner",
                 "difficulty": "Easy",
                 "instructions": "Mix oats and water and cook.",
                 "tags": ["budget-friendly"],
@@ -77,6 +77,17 @@ def test_call_gemini_retries_on_invalid_then_succeeds():
         assert result.mealPlan[0].name == "Oatmeal Bowl"
 
 
+def test_call_gemini_normalizes_meal_type_to_dinner():
+    payload = _valid_payload()
+    payload["mealPlan"][0]["mealType"] = "Breakfast"
+
+    with patch("db.gemini_service._generate_raw_response", return_value=json.dumps(payload)):
+        from db.gemini_service import call_gemini
+
+        result = call_gemini("prompt", retries=1)
+        assert result.mealPlan[0].mealType == "Dinner"
+
+
 def test_call_gemini_raises_after_retry_exhaustion():
     with patch("db.gemini_service._generate_raw_response", return_value="not json"):
         from db.gemini_service import call_gemini
@@ -98,7 +109,7 @@ def test_generate_meal_plan_builds_prompt_and_calls_service():
         }
         result = generate_meal_plan(preferences, retries=2)
 
-        assert result.mealPlan[0].mealType == "Breakfast"
+        assert result.mealPlan[0].mealType == "Dinner"
         mock_call.assert_called_once()
 
 

@@ -200,6 +200,44 @@ def should_process_meal(
     return True
 
 
+def _safe_weeks(weeks: object) -> list[dict]:
+    if not isinstance(weeks, list):
+        return []
+    return [dict(week) if isinstance(week, dict) else {} for week in weeks]
+
+
+def _merge_image_fields_into_latest_weeks(
+    plan_ref,
+    weeks_with_patch: list[dict],
+    week_index: int,
+    meal_index: int,
+) -> list[dict]:
+    latest_doc = plan_ref.get()
+    latest_weeks = _safe_weeks((latest_doc.to_dict() or {}).get("weeks") if latest_doc.exists else [])
+    if week_index >= len(latest_weeks):
+        return weeks_with_patch
+
+    latest_meals = latest_weeks[week_index].get("meals")
+    if not isinstance(latest_meals, list) or meal_index >= len(latest_meals):
+        return weeks_with_patch
+
+    patched_meals = weeks_with_patch[week_index].get("meals")
+    if not isinstance(patched_meals, list) or meal_index >= len(patched_meals):
+        return latest_weeks
+
+    patched_meal = patched_meals[meal_index]
+    latest_meal = dict(latest_meals[meal_index]) if isinstance(latest_meals[meal_index], dict) else {}
+
+    for key in ("image", "imageGenStatus", "imageGenAttempts", "imageGenError"):
+        if key in patched_meal:
+            latest_meal[key] = patched_meal[key]
+        elif key in latest_meal and key == "imageGenError":
+            latest_meal.pop("imageGenError", None)
+
+    latest_weeks[week_index]["meals"][meal_index] = latest_meal
+    return latest_weeks
+
+
 def try_generate_for_plan_meal(
     db: firestore.Client,
     bucket,
@@ -242,7 +280,9 @@ def try_generate_for_plan_meal(
         try:
             weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "pending"
             weeks[week_index]["meals"][meal_index]["imageGenAttempts"] = total_attempt_num
-            plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
+            merged_weeks = _merge_image_fields_into_latest_weeks(plan_ref, weeks, week_index, meal_index)
+            plan_ref.update({"weeks": merged_weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
+            weeks = merged_weeks
 
             image_bytes = generate_image_bytes(client, model, meal_name)
             image_url = upload_image_to_storage(bucket, blob_path, image_bytes)
@@ -250,7 +290,9 @@ def try_generate_for_plan_meal(
             weeks[week_index]["meals"][meal_index]["image"] = image_url
             weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "success"
             weeks[week_index]["meals"][meal_index].pop("imageGenError", None)
-            plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
+            merged_weeks = _merge_image_fields_into_latest_weeks(plan_ref, weeks, week_index, meal_index)
+            plan_ref.update({"weeks": merged_weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
+            weeks = merged_weeks
 
             if meal.get("id"):
                 db.collection("recipes").document(meal_id).set(
@@ -274,7 +316,8 @@ def try_generate_for_plan_meal(
 
     weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "failed"
     weeks[week_index]["meals"][meal_index]["imageGenError"] = last_error[:500]
-    plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
+    merged_weeks = _merge_image_fields_into_latest_weeks(plan_ref, weeks, week_index, meal_index)
+    plan_ref.update({"weeks": merged_weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
     return False, attempts_allowed
 
 

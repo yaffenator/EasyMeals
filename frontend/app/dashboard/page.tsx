@@ -81,6 +81,14 @@ const detailBadgeForMeal = (
 const imageBadgeForMeal = (
   meal: DashboardMeal,
 ): { label: string; className: string } | null => {
+  const value = meal.image;
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  const hasUsableImage =
+    !!trimmed &&
+    !trimmed.startsWith("/api/placeholder") &&
+    !trimmed.startsWith("/meal-placeholder");
+  if (hasUsableImage) return null;
+
   const status =
     typeof meal.imageGenStatus === "string"
       ? meal.imageGenStatus.toLowerCase()
@@ -94,25 +102,10 @@ const imageBadgeForMeal = (
       className: "bg-secondary text-secondary-foreground",
     };
   }
-  const value = meal.image;
-  if (typeof value !== "string") {
-    return {
-      label: "Image Pending",
-      className: "bg-secondary text-secondary-foreground",
-    };
-  }
-  const trimmed = value.trim();
-  if (
-    !trimmed ||
-    trimmed.startsWith("/api/placeholder") ||
-    trimmed.startsWith("/meal-placeholder")
-  ) {
-    return {
-      label: "Image Pending",
-      className: "bg-secondary text-secondary-foreground",
-    };
-  }
-  return null;
+  return {
+    label: "Image Pending",
+    className: "bg-secondary text-secondary-foreground",
+  };
 };
 
 export default function Dashboard() {

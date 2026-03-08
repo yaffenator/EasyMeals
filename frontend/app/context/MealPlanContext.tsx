@@ -125,9 +125,14 @@ function hasPendingImages(plan: MealPlan | null): boolean {
     for (const meal of week.meals) {
       const imageValue = typeof meal.image === "string" ? meal.image.trim() : "";
       const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
-      const missingImage =
-        !imageValue || imageValue.startsWith("/api/placeholder") || imageValue.startsWith("/meal-placeholder");
-      if (status === "pending" || (missingImage && status !== "failed")) {
+      const hasUsableImage =
+        !!imageValue &&
+        !imageValue.startsWith("/api/placeholder") &&
+        !imageValue.startsWith("/meal-placeholder");
+      if (hasUsableImage) {
+        continue;
+      }
+      if (status !== "failed") {
         return true;
       }
     }

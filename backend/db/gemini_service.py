@@ -112,7 +112,9 @@ User preferences:
 - Allergies (strictly exclude): {preferences.get("allergies", [])}
 
 Rules:
-- Produce exactly 28 meals total across breakfast/lunch/dinner.
+- Produce exactly 28 meals total.
+- Every meal MUST be a dinner meal.
+- Set `mealType` to exactly "Dinner" for every meal.
 - Strictly exclude allergens listed above.
 - Keep meals diverse across the month.
 - Include practical ingredient measurements.
@@ -133,7 +135,7 @@ Return JSON with this exact top-level shape:
       "cookTime": "20 minutes",
       "servings": 2,
       "costPerServing": 2.5,
-      "mealType": "Breakfast",
+      "mealType": "Dinner",
       "difficulty": "Easy",
       "instructions": "Step-by-step instructions in one string.",
       "tags": ["budget-friendly"],
@@ -184,6 +186,8 @@ Rules:
 - Produce exactly 28 meals total (7 meals per week x 4 weeks).
 - Use days in sequence: Monday to Sunday, then repeat for each week.
 - For each meal include only: name, mealType, day, description.
+- Every meal MUST be a dinner meal.
+- Set `mealType` to exactly "Dinner" for every meal.
 - Keep description to one short sentence.
 - Strictly exclude allergens listed above.
 - Keep meals diverse across the month.
@@ -194,7 +198,7 @@ Return JSON with this exact top-level shape:
   "mealPlan": [
     {{
       "name": "meal name",
-      "mealType": "Breakfast",
+      "mealType": "Dinner",
       "day": "Monday",
       "description": "Short summary."
     }}
@@ -220,6 +224,8 @@ Target meal to expand:
 
 Rules:
 - Return exactly one meal object matching the target meal name and meal type.
+- The meal MUST be a dinner meal.
+- Set `meal.mealType` to exactly "Dinner".
 - Strictly exclude allergens listed above.
 - Include practical ingredient measurements.
 - Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
@@ -356,7 +362,10 @@ def _call_and_parse(prompt: str, parser: type[TModel], retries: int = DEFAULT_RE
 
 
 def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
-    return _call_and_parse(prompt, GeminiResponse, retries=retries)
+    response = _call_and_parse(prompt, GeminiResponse, retries=retries)
+    for meal in response.mealPlan:
+        meal.mealType = "Dinner"
+    return response
 
 
 def generate_meal_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> GeminiResponse:
@@ -369,6 +378,8 @@ def generate_meal_name_plan(preferences: dict[str, Any], retries: int = DEFAULT_
     response = _call_and_parse(prompt, MealNamePlanResponse, retries=retries)
     if len(response.mealPlan) != 28:
         raise ValueError(f"Expected 28 meals in name pass, got {len(response.mealPlan)}")
+    for meal in response.mealPlan:
+        meal.mealType = "Dinner"
     return response
 
 
@@ -377,5 +388,8 @@ def generate_meal_details(
     meal_outline: MealOutline,
     retries: int = DEFAULT_RETRIES,
 ) -> MealDetailResponse:
+    meal_outline.mealType = "Dinner"
     prompt = build_meal_detail_prompt(preferences, meal_outline)
-    return _call_and_parse(prompt, MealDetailResponse, retries=retries)
+    response = _call_and_parse(prompt, MealDetailResponse, retries=retries)
+    response.meal.mealType = "Dinner"
+    return response
