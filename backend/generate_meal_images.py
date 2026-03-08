@@ -12,8 +12,8 @@ Behavior:
   - imageGenError: last error string (if failed)
 - Uses the most basic image-capable model from your list by default:
   models/gemini-2.5-flash-image
-- Saves images under frontend/public/meal-images/
-- Writes image path back to Firestore (e.g. /meal-images/<file>.png)
+- Uploads images to Firebase Storage (meal-images/<file>.png)
+- Writes Firebase download URL back to Firestore
 
 Env:
 - GEMINI_API_KEY is required
@@ -27,11 +27,13 @@ import os
 import re
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Iterable, Optional, Tuple
+from urllib.parse import quote
 
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, storage
 
 try:
     from google import genai
@@ -43,6 +45,31 @@ except Exception as exc:  # pragma: no cover
 
 DEFAULT_IMAGE_MODEL = "models/gemini-2.5-flash-image"
 PLACEHOLDER_PREFIXES = ("/api/placeholder", "https://via.placeholder.com")
+
+
+def resolve_storage_bucket(project_id: Optional[str]) -> str:
+    configured = (
+        os.environ.get("FIREBASE_STORAGE_BUCKET")
+        or os.environ.get("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET")
+        or os.environ.get("NEXT_PUBLIC_storageBucket")
+        or ""
+    ).strip()
+    if configured:
+        return configured
+
+    inferred_project = (
+        project_id
+        or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        or os.environ.get("GCLOUD_PROJECT")
+        or ""
+    ).strip()
+    if inferred_project:
+        return f"{inferred_project}.appspot.com"
+
+    raise ValueError(
+        "Could not resolve Firebase Storage bucket. Set FIREBASE_STORAGE_BUCKET "
+        "or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET."
+    )
 
 
 def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
@@ -71,7 +98,9 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
             "serviceAccountKey.json in backend/ or backend/secrets/."
         )
 
-    options = {"projectId": project_id} if project_id else None
+    options = {"storageBucket": resolve_storage_bucket(project_id)}
+    if project_id:
+        options["projectId"] = project_id
     firebase_admin.initialize_app(cred_obj, options=options)
     return firestore.client()
 
@@ -128,6 +157,20 @@ def generate_image_bytes(client: genai.Client, model: str, meal_name: str) -> by
     return extract_image_bytes(response)
 
 
+def upload_image_to_storage(bucket, blob_path: str, image_bytes: bytes) -> str:
+    token = str(uuid.uuid4())
+    blob = bucket.blob(blob_path)
+    blob.metadata = {"firebaseStorageDownloadTokens": token}
+    blob.cache_control = "public, max-age=31536000, immutable"
+    blob.upload_from_string(image_bytes, content_type="image/png")
+    blob.patch()
+    encoded_blob_path = quote(blob_path, safe="")
+    return (
+        f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}/o/"
+        f"{encoded_blob_path}?alt=media&token={token}"
+    )
+
+
 def iter_user_refs(db: firestore.Client, user_id: Optional[str]) -> Iterable:
     if user_id:
         yield db.collection("users").document(user_id)
@@ -159,6 +202,7 @@ def should_process_meal(
 
 def try_generate_for_plan_meal(
     db: firestore.Client,
+    bucket,
     client: genai.Client,
     model: str,
     plan_ref,
@@ -167,7 +211,6 @@ def try_generate_for_plan_meal(
     meal_index: int,
     meal: dict,
     uid: str,
-    public_dir: Path,
     attempts_per_meal: int,
     max_attempts: int,
     dry_run: bool,
@@ -183,13 +226,13 @@ def try_generate_for_plan_meal(
 
     slug = slugify(meal_name)
     filename = f"{uid}_{plan_ref.id}_{slugify(meal_id)}_{slug}.png"
-    out_path = public_dir / filename
-    web_path = f"/meal-images/{filename}"
+    blob_path = f"meal-images/{filename}"
+    storage_url = f"gs://{bucket.name}/{blob_path}"
 
     if dry_run:
         print(
             f"[DRY RUN] Would generate image for users/{uid}/plans/{plan_ref.id} "
-            f"(week={week_index}, meal={meal_index}) -> {web_path}"
+            f"(week={week_index}, meal={meal_index}) -> {storage_url}"
         )
         return True, 1
 
@@ -202,22 +245,22 @@ def try_generate_for_plan_meal(
             plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
 
             image_bytes = generate_image_bytes(client, model, meal_name)
-            out_path.write_bytes(image_bytes)
+            image_url = upload_image_to_storage(bucket, blob_path, image_bytes)
 
-            weeks[week_index]["meals"][meal_index]["image"] = web_path
+            weeks[week_index]["meals"][meal_index]["image"] = image_url
             weeks[week_index]["meals"][meal_index]["imageGenStatus"] = "success"
             weeks[week_index]["meals"][meal_index].pop("imageGenError", None)
             plan_ref.update({"weeks": weeks, "updatedAt": firestore.SERVER_TIMESTAMP})
 
             if meal.get("id"):
                 db.collection("recipes").document(meal_id).set(
-                    {"image": web_path, "updatedAt": firestore.SERVER_TIMESTAMP},
+                    {"image": image_url, "updatedAt": firestore.SERVER_TIMESTAMP},
                     merge=True,
                 )
 
             print(
                 f"Generated image for users/{uid}/plans/{plan_ref.id} "
-                f"(week={week_index}, meal={meal_index}): {web_path}"
+                f"(week={week_index}, meal={meal_index}): {storage_url}"
             )
             return True, attempt_index
         except Exception as exc:
@@ -237,9 +280,9 @@ def try_generate_for_plan_meal(
 
 def run(
     db: firestore.Client,
+    bucket,
     client: genai.Client,
     model: str,
-    public_dir: Path,
     user_id: Optional[str],
     limit: Optional[int],
     dry_run: bool,
@@ -248,8 +291,6 @@ def run(
     attempts_per_meal: int,
     passes: int,
 ) -> int:
-    public_dir.mkdir(parents=True, exist_ok=True)
-
     generated_total = 0
     checked_total = 0
 
@@ -287,6 +328,7 @@ def run(
                         pass_attempted += 1
                         success, _attempts_used = try_generate_for_plan_meal(
                             db=db,
+                            bucket=bucket,
                             client=client,
                             model=model,
                             plan_ref=plan_doc.reference,
@@ -295,7 +337,6 @@ def run(
                             meal_index=meal_index,
                             meal=meal_data,
                             uid=uid,
-                            public_dir=public_dir,
                             attempts_per_meal=attempts_per_meal,
                             max_attempts=max_attempts,
                             dry_run=dry_run,
@@ -340,16 +381,14 @@ def main() -> int:
 
     try:
         db = init_firestore(project_id=args.project_id)
+        bucket = storage.bucket(resolve_storage_bucket(args.project_id))
         client = genai.Client(api_key=api_key)
-
-        repo_root = Path(__file__).resolve().parent.parent
-        public_dir = repo_root / "frontend" / "public" / "meal-images"
 
         return run(
             db=db,
+            bucket=bucket,
             client=client,
             model=args.model,
-            public_dir=public_dir,
             user_id=args.user_id,
             limit=args.limit,
             dry_run=args.dry_run,
