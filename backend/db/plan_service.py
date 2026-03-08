@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
 from google.cloud import firestore as fs
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from db.firestore_client import db
 from db.diversity_service import compute_final_scores
@@ -105,7 +106,7 @@ def _shift_month(month_yyyy_mm: str, delta_months: int) -> str:
 def resolve_target_month(user_id: str) -> str:
     current_month = _utcnow().strftime("%Y-%m")
     plans_ref = db.collection("users").document(user_id).collection("plans")
-    ready_docs = list(plans_ref.where("status", "==", "ready").stream())
+    ready_docs = list(plans_ref.where(filter=FieldFilter("status", "==", "ready")).stream())
     if not ready_docs:
         return current_month
 
@@ -120,7 +121,7 @@ def resolve_target_month(user_id: str) -> str:
 
 def get_next_plan_version(user_id: str, target_month: str) -> int:
     plans_ref = db.collection("users").document(user_id).collection("plans")
-    same_month_docs = list(plans_ref.where("planMonth", "==", target_month).stream())
+    same_month_docs = list(plans_ref.where(filter=FieldFilter("planMonth", "==", target_month)).stream())
     versions = []
     for doc in same_month_docs:
         version = (doc.to_dict() or {}).get("version")
@@ -478,11 +479,13 @@ def dedupe_or_create_recipes(processed_meals: list[dict[str, Any]]) -> tuple[lis
         normalized_name = normalize_recipe_name(recipe_name)
         existing_doc = None
 
-        normalized_matches = list(recipes_ref.where("normalizedName", "==", normalized_name).limit(1).stream())
+        normalized_matches = list(
+            recipes_ref.where(filter=FieldFilter("normalizedName", "==", normalized_name)).limit(1).stream()
+        )
         if normalized_matches:
             existing_doc = normalized_matches[0]
         else:
-            exact_matches = list(recipes_ref.where("name", "==", recipe_name).limit(1).stream())
+            exact_matches = list(recipes_ref.where(filter=FieldFilter("name", "==", recipe_name)).limit(1).stream())
             if exact_matches:
                 existing_doc = exact_matches[0]
 
@@ -751,7 +754,11 @@ def update_plan_status(user_id: str, plan_id: str, status: str, superseded_by: s
 
 def supersede_ready_plans_for_month(user_id: str, plan_month: str, new_plan_id: str) -> int:
     plans_ref = db.collection("users").document(user_id).collection("plans")
-    docs = list(plans_ref.where("planMonth", "==", plan_month).where("status", "==", "ready").stream())
+    docs = list(
+        plans_ref.where(filter=FieldFilter("planMonth", "==", plan_month))
+        .where(filter=FieldFilter("status", "==", "ready"))
+        .stream()
+    )
     updated = 0
     for doc in docs:
         if doc.id == new_plan_id:
@@ -798,6 +805,7 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     if db is None:
         raise ValueError("Firestore client is not initialized.")
 
+    plan_started_at = _utcnow()
     plan_id = f"plan_{uuid4().hex}"
     target_month = resolve_target_month(request.userId)
     plan_version = get_next_plan_version(request.userId, target_month)
@@ -835,7 +843,12 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             status="generating",
         )
 
+        gemini_started_at = _utcnow()
         gemini_response = generate_meal_plan(preferences)
+        gemini_duration_seconds = round((_utcnow() - gemini_started_at).total_seconds(), 2)
+        print(
+            f"[plan_service] request_id={request_id} stage=gemini_completed duration_s={gemini_duration_seconds}"
+        )
 
         ingredient_id_map = upsert_ingredient_prices(gemini_response.ingredientPrices)
         ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
@@ -887,6 +900,10 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
         )
 
         lock_final_status = "ready"
+        total_duration_seconds = round((_utcnow() - plan_started_at).total_seconds(), 2)
+        print(
+            f"[plan_service] request_id={request_id} stage=plan_completed duration_s={total_duration_seconds}"
+        )
         return PlanGenerationResponse(
             userId=request.userId,
             planId=plan_id,
@@ -919,6 +936,11 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
                 "supersededPlansCount": superseded_count,
                 "planPath": f"users/{request.userId}/plans/{plan_id}",
                 "todoFlow": TODO_FLOW,
+                "timing": {
+                    "startedAt": plan_started_at.isoformat(),
+                    "geminiDurationSeconds": gemini_duration_seconds,
+                    "totalDurationSeconds": total_duration_seconds,
+                },
             },
         )
     except Exception as exc:

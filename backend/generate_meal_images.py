@@ -52,6 +52,7 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
     key_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
     script_dir = Path(__file__).resolve().parent
     local_key_path = script_dir / "serviceAccountKey.json"
+    secrets_key_path = script_dir / "secrets" / "serviceAccountKey.json"
 
     if key_path_env:
         key_path = Path(key_path_env)
@@ -62,10 +63,12 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
         cred_obj = credentials.Certificate(str(key_path))
     elif local_key_path.exists():
         cred_obj = credentials.Certificate(str(local_key_path))
+    elif secrets_key_path.exists():
+        cred_obj = credentials.Certificate(str(secrets_key_path))
     else:
         raise FileNotFoundError(
             "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
-            "serviceAccountKey.json in backend/."
+            "serviceAccountKey.json in backend/ or backend/secrets/."
         )
 
     options = {"projectId": project_id} if project_id else None

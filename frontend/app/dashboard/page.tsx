@@ -20,7 +20,6 @@ import {
   DollarSign,
   Calendar,
   Soup,
-  RefreshCw,
   ChefHat,
 } from "lucide-react";
 import { useAuth } from "../context/auth";
@@ -28,14 +27,72 @@ import { useRouter } from "next/navigation";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { useMealPlan } from "../context/MealPlanContext"; // Import the context
+import type { MealPlan } from "../context/MealPlanContext";
+
+type DashboardMeal = {
+  id?: string;
+  day?: string;
+  name?: string;
+  description?: string;
+  image?: string;
+  prepTime?: string;
+  totalCost?: string;
+  costPerServing?: number | string;
+  calories?: number;
+  imageGenStatus?: string;
+};
+
+type DashboardWeek = {
+  weekNumber?: number;
+  meals?: DashboardMeal[];
+};
+
+const parseMoney = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value.replace("$", "").trim());
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const parseMinutes = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const formatCurrency = (value: unknown): string => `$${parseMoney(value).toFixed(2)}`;
+const imageBadgeForMeal = (meal: DashboardMeal): { label: string; className: string } | null => {
+  const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
+  if (status === "failed") {
+    return { label: "Image Failed", className: "bg-red-100 text-red-800" };
+  }
+  if (status === "pending") {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
+  const value = meal.image;
+  if (typeof value !== "string") {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith("/api/placeholder") || trimmed.startsWith("/meal-placeholder")) {
+    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  }
+  return null;
+};
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
-  const { mealPlan, setMealPlan } = useMealPlan();
+  const { mealPlan, setMealPlan, isLoading, refreshPlan, imageSyncStatus } = useMealPlan();
 
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
+  const [isRefreshingPlan, setIsRefreshingPlan] = useState(false);
 
   const router = useRouter();
   const { currentUser } = useAuth();
@@ -50,7 +107,7 @@ export default function Dashboard() {
   // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
-      const uid = (currentUser as any)?.uid || auth.currentUser?.uid;
+      const uid = auth.currentUser?.uid;
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
@@ -72,7 +129,7 @@ export default function Dashboard() {
   // 2. The hydration logic (useEffect) has been REMOVED.
   // It now lives in MealPlanContext.tsx to allow background processing.
 
-  const handleCreateMealPlan = (fullMealPlan: any) => {
+  const handleCreateMealPlan = (fullMealPlan: MealPlan) => {
     setMealPlan(fullMealPlan); // Updates the Global Context
     setQuestionnaireCompleted(true);
     setShowWizard(false);
@@ -83,6 +140,38 @@ export default function Dashboard() {
     setShowWizard(true);
   };
 
+  const handleRefreshPlan = async () => {
+    setIsRefreshingPlan(true);
+    try {
+      await refreshPlan();
+    } finally {
+      setIsRefreshingPlan(false);
+    }
+  };
+
+  const displayName = auth.currentUser?.displayName || currentUser?.displayName;
+  const emailName = auth.currentUser?.email?.split("@")[0] || currentUser?.email?.split("@")[0] || "Chef";
+  const prefBudget =
+    mealPlan &&
+    mealPlan.preferences &&
+    typeof mealPlan.preferences === "object" &&
+    "monthlyBudget" in mealPlan.preferences
+      ? mealPlan.preferences.monthlyBudget
+      : mealPlan?.monthlyBudget;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-white to-secondary/30">
+        <DashboardHeading />
+        <main className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-lg text-muted-foreground">Loading your meal plan...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // GUARD CLAUSE: Show "Create" prompt if no plan exists
   if (!questionnaireCompleted || !mealPlan || !mealPlan.weeks) {
     return (
@@ -92,11 +181,11 @@ export default function Dashboard() {
           <div className="max-w-2xl mx-auto text-center">
             <ChefHat className="w-16 h-16 text-primary mx-auto mb-6" />
             <h1 className="text-3xl md:text-4xl text-primary mb-4">
-              Welcome, {(currentUser as any)?.displayName || "Chef"}!
+              Welcome, {displayName || "Chef"}!
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
-              It looks like you haven't generated your personalized plan yet.
-              Let's create a 4-week meal plan tailored to your budget and goals.
+              It looks like you have not generated your personalized plan yet.
+              Let&apos;s create a 4-week meal plan tailored to your budget and goals.
             </p>
             <Button
               size="lg"
@@ -104,6 +193,15 @@ export default function Dashboard() {
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               Create Your Meal Plan
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleRefreshPlan}
+              disabled={isRefreshingPlan}
+              className="ml-3"
+            >
+              {isRefreshingPlan ? "Checking..." : "Check for Completed Plan"}
             </Button>
           </div>
         </main>
@@ -118,20 +216,22 @@ export default function Dashboard() {
   }
 
   // Calculate current view data
-  const currentWeek = mealPlan.weeks[selectedWeek - 1] || { meals: [] };
+  const mealPlanWeeks = mealPlan.weeks as DashboardWeek[];
+  const currentWeek = mealPlanWeeks[selectedWeek - 1] || { meals: [] };
+  const currentWeekMeals = currentWeek.meals || [];
 
   const totalWeeklyCost =
-    currentWeek.meals?.reduce(
-      (sum: number, meal: any) =>
-        sum + parseFloat(String(meal.totalCost || 0).replace("$", "")),
+    currentWeekMeals.reduce(
+      (sum: number, meal: DashboardMeal) =>
+        sum + parseMoney(meal.costPerServing ?? meal.totalCost ?? 0),
       0,
-    ) || 0;
+    );
 
-  const avgPrepTime = currentWeek.meals?.length
-    ? currentWeek.meals.reduce(
-        (sum: number, meal: any) => sum + parseInt(String(meal.prepTime || 0)),
+  const avgPrepTime = currentWeekMeals.length
+    ? currentWeekMeals.reduce(
+        (sum: number, meal: DashboardMeal) => sum + parseMinutes(meal.prepTime),
         0,
-      ) / currentWeek.meals.length
+      ) / currentWeekMeals.length
     : 0;
 
   return (
@@ -141,14 +241,28 @@ export default function Dashboard() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
             Hello,{" "}
-            {(currentUser as any)?.displayName ||
-              (currentUser as any)?.email?.split("@")[0]}
+            {displayName || emailName}
             !
           </h1>
           <p className="text-muted-foreground">
             Recipes optimized for your $
-            {mealPlan?.preferences?.monthlyBudget || "0"}/month budget
+            {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
+          {imageSyncStatus === "syncing" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Generating meal images in the background. This page auto-refreshes every ~10 seconds.
+            </p>
+          )}
+          {imageSyncStatus === "ready" && (
+            <p className="mt-2 text-sm text-green-700">
+              Meal images are ready.
+            </p>
+          )}
+          {imageSyncStatus === "timeout" && (
+            <p className="mt-2 text-sm text-amber-700">
+              Image generation is taking longer than expected. Use Refresh Plan to check latest status.
+            </p>
+          )}
         </div>
 
         {/* Week Selector */}
@@ -158,18 +272,21 @@ export default function Dashboard() {
             <h2 className="text-xl">Select Week</h2>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {mealPlan.weeks.map((week: any) => (
+            {mealPlanWeeks.map((week: DashboardWeek, index: number) => {
+              const weekNumber = week.weekNumber || index + 1;
+              return (
               <Button
-                key={week.weekNumber}
+                key={weekNumber}
                 variant={
-                  selectedWeek === week.weekNumber ? "default" : "outline"
+                  selectedWeek === weekNumber ? "default" : "outline"
                 }
-                onClick={() => setSelectedWeek(week.weekNumber)}
-                className={selectedWeek === week.weekNumber ? "bg-primary" : ""}
+                onClick={() => setSelectedWeek(weekNumber)}
+                className={selectedWeek === weekNumber ? "bg-primary" : ""}
               >
-                Week {week.weekNumber}
+                Week {weekNumber}
               </Button>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -195,32 +312,26 @@ export default function Dashboard() {
 
         {/* Meal Plan Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentWeek.meals.map((meal: any, index: number) => (
-            <div key={meal.id || `meal-${index}`} className="h-full">
-              {meal.status === "pending" ? (
-                /* PROGRESSIVE LOADING CARD */
-                <Card className="overflow-hidden border-dashed border-2 flex flex-col items-center justify-center p-12 h-full bg-muted/20">
-                  <RefreshCw className="w-8 h-8 text-muted-foreground animate-spin mb-4" />
-                  <h3 className="font-medium text-muted-foreground text-center">
-                    Drafting {meal.name}...
-                  </h3>
-                  <p className="text-xs text-muted-foreground/60 text-center mt-2">
-                    AI is calculating ingredients & costs
-                  </p>
-                </Card>
-              ) : (
-                /* COMPLETED MEAL CARD */
+          {currentWeekMeals.map((meal: DashboardMeal, index: number) => {
+            const imageBadge = imageBadgeForMeal(meal);
+            return (
+              <div key={meal.id || `meal-${index}`} className="h-full">
                 <Link href={`/recipe/${meal.id}`}>
                   <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
                     <div className="relative h-48">
                       <ImageWithFallback
-                        src={meal.image || "/api/placeholder/400/300"}
-                        alt={meal.name}
+                        src={meal.image || "/meal-placeholder.svg"}
+                        alt={meal.name || "Meal image"}
                         className="w-full h-full object-cover"
                       />
                       <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
                         {meal.day}
                       </Badge>
+                      {imageBadge && (
+                        <Badge className={`absolute top-3 left-3 ${imageBadge.className}`}>
+                          {imageBadge.label}
+                        </Badge>
+                      )}
                     </div>
                     <CardHeader className="pb-0 pt-4">
                       <CardTitle className="text-xl">{meal.name}</CardTitle>
@@ -234,24 +345,27 @@ export default function Dashboard() {
                           <Clock className="w-4 h-4" /> {meal.prepTime}
                         </div>
                         <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" /> {meal.totalCost}
+                          <DollarSign className="w-4 h-4" /> {formatCurrency(meal.costPerServing ?? meal.totalCost)}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Soup className="w-4 h-4" /> {meal.calories} cal
+                          <Soup className="w-4 h-4" /> {meal.calories || 0} cal
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 </Link>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" onClick={handleGenerateNew}>
             Generate New Plan
+          </Button>
+          <Button size="lg" variant="outline" onClick={handleRefreshPlan} disabled={isRefreshingPlan}>
+            {isRefreshingPlan ? "Refreshing..." : "Refresh Plan"}
           </Button>
           <Button size="lg" variant="outline">
             Download Shopping List
