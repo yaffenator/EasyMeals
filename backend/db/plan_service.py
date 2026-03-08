@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -12,7 +14,9 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 
 from db.firestore_client import db
 from db.diversity_service import compute_final_scores
-from db.gemini_service import generate_meal_plan
+from db.gemini_service import MealOutline
+from db.gemini_service import generate_meal_details
+from db.gemini_service import generate_meal_name_plan
 from db.ingredient_service import get_or_create_ingredient
 from db.ingredient_service import normalize_name
 from db.ingredient_service import normalize_unit
@@ -70,15 +74,20 @@ class PlanGenerationResponse(BaseModel):
 
 
 TODO_FLOW = [
-    "Generate validated meal plan from Gemini response schema.",
-    "Upsert ingredient price entries and map ingredient ids.",
-    "Recalculate all meal costs server-side.",
-    "Deduplicate or create recipe documents.",
-    "Apply diversity scoring to candidate meals.",
-    "Enforce budget with lower-cost swaps when needed.",
-    "Aggregate grocery list by ingredient and normalized unit.",
+    "Generate name-only meal outline (first pass).",
+    "Persist generating plan with pending meals.",
+    "Fill each meal details one-by-one with Gemini (second pass).",
+    "Upsert ingredient prices and recalculate trusted costs per meal.",
+    "Deduplicate or create recipe docs per completed meal.",
+    "Update plan after each meal so frontend can unlock completed cards.",
+    "Finalize grocery list and plan status.",
     "Persist users/{uid}/plans/{planId} and update mealHistory.",
 ]
+
+
+PLAN_GENERATION_MAX_WORKERS = max(1, int(os.getenv("PLAN_GENERATION_MAX_WORKERS", "2")))
+PLAN_GENERATION_EXECUTOR = ThreadPoolExecutor(max_workers=PLAN_GENERATION_MAX_WORKERS)
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
 def _has_max_decimals(value: float, max_decimals: int) -> bool:
@@ -432,6 +441,80 @@ def chunk_meals_into_weeks(processed_meals: list[dict[str, Any]], chunk_size: in
         week_index = index // chunk_size
         weeks.append(PlanWeek(weekIndex=week_index, meals=processed_meals[index : index + chunk_size]))
     return weeks
+
+
+def _flatten_weeks(weeks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    flattened: list[dict[str, Any]] = []
+    for week in weeks:
+        for meal in week.get("meals", []):
+            flattened.append(meal)
+    return flattened
+
+
+def _build_placeholder_meals(plan_id: str, outlines: list[MealOutline]) -> list[dict[str, Any]]:
+    placeholders: list[dict[str, Any]] = []
+    for index, outline in enumerate(outlines):
+        week_index = index // 7
+        day_index = index % 7
+        day_name = outline.day.strip() if isinstance(outline.day, str) and outline.day.strip() else DAY_NAMES[day_index]
+        description = outline.description.strip() if isinstance(outline.description, str) else ""
+        placeholders.append(
+            {
+                "id": f"{plan_id}_w{week_index + 1}_m{day_index + 1}",
+                "name": outline.name,
+                "day": day_name,
+                "description": description,
+                "mealType": outline.mealType,
+                "calories": 0,
+                "carbs": 0.0,
+                "fat": 0.0,
+                "protein": 0.0,
+                "prepTime": "",
+                "cookTime": "",
+                "servings": 0,
+                "costPerServing": 0.0,
+                "difficulty": "",
+                "instructions": "",
+                "tags": [],
+                "ingredientItems": [],
+                "ingredients": [],
+                "tips": [],
+                "source": "generated",
+                "image": "",
+                "imageGenStatus": "pending",
+                "status": "pending",
+            }
+        )
+    return placeholders
+
+
+def _set_plan_progress(
+    user_id: str,
+    plan_id: str,
+    *,
+    weeks: list[dict[str, Any]],
+    status: str,
+    failed_count: int = 0,
+) -> None:
+    completed_meals = [meal for meal in _flatten_weeks(weeks) if meal.get("status") == "completed"]
+    grocery_list = aggregate_grocery_list(completed_meals)
+    total_meals = len(_flatten_weeks(weeks))
+    progress_payload = {
+        "completedMeals": len(completed_meals),
+        "failedMeals": failed_count,
+        "totalMeals": total_meals,
+    }
+    db.collection("users").document(user_id).collection("plans").document(plan_id).set(
+        {
+            "weeks": weeks,
+            "estimatedTotalCost": _total_cost(completed_meals),
+            "groceryList": [item.model_dump() for item in grocery_list],
+            "status": status,
+            "generationProgress": progress_payload,
+            "updatedAt": fs.SERVER_TIMESTAMP,
+        },
+        merge=True,
+    )
 
 
 def normalize_recipe_name(name: str) -> str:
@@ -793,15 +876,206 @@ def append_meal_history(user_id: str, plan_id: str, meals: list[dict[str, Any]])
     return created
 
 
-def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
-    """
-    Orchestrates plan creation and persistence for a user.
+def _sync_day_docs(user_id: str, plan_id: str, weeks: list[dict[str, Any]]) -> None:
+    plan_ref = db.collection("users").document(user_id).collection("plans").document(plan_id)
+    day_counter = 0
+    for week in weeks:
+        week_index = int(week.get("weekIndex", 0))
+        for meal in week.get("meals", []):
+            day_counter += 1
+            plan_ref.collection("days").document(f"day_{day_counter:02d}").set(
+                {
+                    "dayIndex": day_counter,
+                    "weekIndex": week_index,
+                    "mealId": meal.get("id"),
+                    "name": meal.get("name"),
+                    "mealType": meal.get("mealType"),
+                    "costPerServing": meal.get("costPerServing"),
+                    "calories": meal.get("calories"),
+                    "recipeRef": meal.get("recipeRef"),
+                    "status": meal.get("status"),
+                    "updatedAt": fs.SERVER_TIMESTAMP,
+                },
+                merge=True,
+            )
 
-    Step 2 integration:
-    - Build Gemini preferences from request payload.
-    - Generate and validate meal plan response via gemini_service.
-    - Return a structured placeholder response until persistence steps are implemented.
-    """
+
+def _normalize_tips(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    if isinstance(value, str) and value.strip():
+        return [value.strip()]
+    return []
+
+
+def _complete_plan_details_in_background(
+    request: PlanGenerationRequest,
+    preferences: dict[str, Any],
+    plan_id: str,
+    request_id: str,
+    target_month: str,
+    weeks_payload: list[dict[str, Any]],
+    outlines: list[MealOutline],
+    plan_started_at: datetime,
+) -> None:
+    lock_final_status = "failed"
+    failed_count = 0
+
+    try:
+        total_meals = len(outlines)
+        working_weeks = [
+            {"weekIndex": int(week.get("weekIndex", 0)), "meals": [dict(meal) for meal in week.get("meals", [])]}
+            for week in weeks_payload
+        ]
+
+        for index, outline in enumerate(outlines):
+            week_index = index // 7
+            meal_index = index % 7
+            current_meal = dict(working_weeks[week_index]["meals"][meal_index])
+            print(
+                f"[plan_service] request_id={request_id} stage=meal_started "
+                f"index={index + 1}/{total_meals} name={outline.name}"
+            )
+
+            try:
+                detail_response = generate_meal_details(preferences, outline, retries=2)
+                ingredient_id_map = upsert_ingredient_prices(detail_response.ingredientPrices)
+                ingredient_name_map = build_normalized_name_map(detail_response.ingredientPrices, ingredient_id_map)
+                price_hint_map = build_price_hint_map(detail_response.ingredientPrices)
+
+                processed_meals, _ = recalculate_meal_costs(
+                    [detail_response.meal],
+                    ingredient_id_map,
+                    ingredient_name_map,
+                    price_hint_map,
+                )
+                deduped_meals, _recipe_stats = dedupe_or_create_recipes(processed_meals)
+                completed_meal = dict(deduped_meals[0])
+
+                merged_meal = {
+                    **current_meal,
+                    **completed_meal,
+                    "day": current_meal.get("day") or outline.day,
+                    "description": completed_meal.get("description") or current_meal.get("description", ""),
+                    "tips": _normalize_tips(completed_meal.get("tips")),
+                    "status": "completed",
+                }
+
+                # Preserve image generation fields when available.
+                for key in ("image", "imageGenStatus", "imageGenAttempts", "imageGenError"):
+                    if key in current_meal and key not in merged_meal:
+                        merged_meal[key] = current_meal[key]
+                    if key in current_meal and merged_meal.get(key) in (None, ""):
+                        merged_meal[key] = current_meal[key]
+
+                working_weeks[week_index]["meals"][meal_index] = merged_meal
+                print(
+                    f"[plan_service] request_id={request_id} stage=meal_completed "
+                    f"index={index + 1}/{total_meals} name={outline.name}"
+                )
+            except Exception as exc:
+                failed_count += 1
+                current_meal["status"] = "failed"
+                current_meal["generationError"] = str(exc)[:500]
+                working_weeks[week_index]["meals"][meal_index] = current_meal
+                print(
+                    f"[plan_service] request_id={request_id} stage=meal_failed "
+                    f"index={index + 1}/{total_meals} name={outline.name} error={exc}"
+                )
+
+            _set_plan_progress(
+                request.userId,
+                plan_id,
+                weeks=working_weeks,
+                status="generating",
+                failed_count=failed_count,
+            )
+
+        completed_meals = [meal for meal in _flatten_weeks(working_weeks) if meal.get("status") == "completed"]
+        all_completed = len(completed_meals) == len(outlines)
+
+        if all_completed:
+            superseded_count = supersede_ready_plans_for_month(request.userId, target_month, plan_id)
+            meal_history_added = append_meal_history(
+                user_id=request.userId,
+                plan_id=plan_id,
+                meals=completed_meals,
+            )
+            _set_plan_progress(
+                request.userId,
+                plan_id,
+                weeks=working_weeks,
+                status="ready",
+                failed_count=0,
+            )
+            _sync_day_docs(request.userId, plan_id, working_weeks)
+            lock_final_status = "ready"
+            total_duration_seconds = round((_utcnow() - plan_started_at).total_seconds(), 2)
+            db.collection("users").document(request.userId).collection("plans").document(plan_id).set(
+                {
+                    "metadata": {
+                        "requestId": request_id,
+                        "planMonth": target_month,
+                        "mealCount": len(outlines),
+                        "mealHistoryAdded": meal_history_added,
+                        "supersededPlansCount": superseded_count,
+                        "todoFlow": TODO_FLOW,
+                        "timing": {
+                            "startedAt": plan_started_at.isoformat(),
+                            "totalDurationSeconds": total_duration_seconds,
+                        },
+                    },
+                    "updatedAt": fs.SERVER_TIMESTAMP,
+                },
+                merge=True,
+            )
+            print(f"[plan_service] request_id={request_id} stage=plan_completed duration_s={total_duration_seconds}")
+        else:
+            _set_plan_progress(
+                request.userId,
+                plan_id,
+                weeks=working_weeks,
+                status="failed",
+                failed_count=failed_count,
+            )
+            print(
+                f"[plan_service] request_id={request_id} stage=plan_failed "
+                f"reason=meal_detail_failures failed_count={failed_count}"
+            )
+    except Exception as exc:
+        try:
+            update_plan_status(request.userId, plan_id, "failed")
+        except Exception:
+            pass
+        print(f"[plan_service] request_id={request_id} stage=plan_failed error={exc}")
+    finally:
+        release_generation_lock(request.userId, request_id, lock_final_status)
+
+
+def _submit_plan_generation_job(
+    request: PlanGenerationRequest,
+    preferences: dict[str, Any],
+    plan_id: str,
+    request_id: str,
+    target_month: str,
+    weeks_payload: list[dict[str, Any]],
+    outlines: list[MealOutline],
+    plan_started_at: datetime,
+) -> None:
+    PLAN_GENERATION_EXECUTOR.submit(
+        _complete_plan_details_in_background,
+        request,
+        preferences,
+        plan_id,
+        request_id,
+        target_month,
+        weeks_payload,
+        outlines,
+        plan_started_at,
+    )
+
+
+def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationResponse:
     if db is None:
         raise ValueError("Firestore client is not initialized.")
 
@@ -829,12 +1103,18 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
     }
 
     try:
-        # Create a generating placeholder plan first.
+        first_pass_started_at = _utcnow()
+        name_pass_response = generate_meal_name_plan(preferences)
+        first_pass_duration_seconds = round((_utcnow() - first_pass_started_at).total_seconds(), 2)
+        placeholder_meals = _build_placeholder_meals(plan_id, name_pass_response.mealPlan)
+        weeks = chunk_meals_into_weeks(placeholder_meals)
+        weeks_payload = [week.model_dump() for week in weeks]
+
         persist_user_plan(
             user_id=request.userId,
             plan_id=plan_id,
             request=request,
-            weeks=[],
+            weeks=weeks,
             grocery_list=[],
             estimated_total_cost=0.0,
             plan_month=target_month,
@@ -842,104 +1122,44 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             request_id=request_id,
             status="generating",
         )
-
-        gemini_started_at = _utcnow()
-        gemini_response = generate_meal_plan(preferences)
-        gemini_duration_seconds = round((_utcnow() - gemini_started_at).total_seconds(), 2)
-        print(
-            f"[plan_service] request_id={request_id} stage=gemini_completed duration_s={gemini_duration_seconds}"
+        _set_plan_progress(
+            request.userId,
+            plan_id,
+            weeks=weeks_payload,
+            status="generating",
+            failed_count=0,
         )
 
-        ingredient_id_map = upsert_ingredient_prices(gemini_response.ingredientPrices)
-        ingredient_name_map = build_normalized_name_map(gemini_response.ingredientPrices, ingredient_id_map)
-        price_hint_map = build_price_hint_map(gemini_response.ingredientPrices)
-
-        processed_meals, estimated_total_cost = recalculate_meal_costs(
-            gemini_response.mealPlan,
-            ingredient_id_map,
-            ingredient_name_map,
-            price_hint_map,
-        )
-
-        deduped_meals, recipe_stats = dedupe_or_create_recipes(processed_meals)
-
-        selected_meals, diversity_stats = apply_diversity_selection(
-            user_id=request.userId,
-            deduped_meals=deduped_meals,
-            target_count=len(deduped_meals),
-        )
-
-        budgeted_meals, budget_stats = enforce_budget_with_swaps(
-            selected_meals=selected_meals,
-            candidate_pool=deduped_meals,
-            monthly_budget=request.monthlyBudget,
-        )
-
-        grocery_list = aggregate_grocery_list(budgeted_meals)
-        final_total_cost = _total_cost(budgeted_meals)
-        weeks = chunk_meals_into_weeks(budgeted_meals)
-
-        persist_user_plan(
-            user_id=request.userId,
-            plan_id=plan_id,
+        _submit_plan_generation_job(
             request=request,
-            weeks=weeks,
-            grocery_list=grocery_list,
-            estimated_total_cost=final_total_cost,
-            plan_month=target_month,
-            version=plan_version,
-            request_id=request_id,
-            status="ready",
-        )
-        superseded_count = supersede_ready_plans_for_month(request.userId, target_month, plan_id)
-
-        meal_history_added = append_meal_history(
-            user_id=request.userId,
+            preferences=preferences,
             plan_id=plan_id,
-            meals=budgeted_meals,
+            request_id=request_id,
+            target_month=target_month,
+            weeks_payload=weeks_payload,
+            outlines=list(name_pass_response.mealPlan),
+            plan_started_at=plan_started_at,
         )
 
-        lock_final_status = "ready"
-        total_duration_seconds = round((_utcnow() - plan_started_at).total_seconds(), 2)
-        print(
-            f"[plan_service] request_id={request_id} stage=plan_completed duration_s={total_duration_seconds}"
-        )
         return PlanGenerationResponse(
             userId=request.userId,
             planId=plan_id,
-            status="stored",
+            status="generating",
             monthlyBudget=request.monthlyBudget,
-            estimatedTotalCost=final_total_cost,
+            estimatedTotalCost=0.0,
             weeks=weeks,
-            groceryList=grocery_list,
+            groceryList=[],
             metadata={
-                "implementedStep": 9,
+                "implementedStep": 2,
                 "requestId": request_id,
                 "planMonth": target_month,
                 "planVersion": plan_version,
-                "mealCount": len(gemini_response.mealPlan),
-                "ingredientPriceCount": len(gemini_response.ingredientPrices),
-                "ingredientMappingCount": len(set(ingredient_id_map.values())),
-                "ingredientIdMap": ingredient_id_map,
-                "recalculatedMealCount": len(processed_meals),
-                "recipesCreated": recipe_stats["recipesCreated"],
-                "recipesReused": recipe_stats["recipesReused"],
-                "diversityScoredCount": diversity_stats["scoredCount"],
-                "diversitySelectedCount": diversity_stats["selectedCount"],
-                "budgetExceededInitially": budget_stats["budgetExceededInitially"],
-                "budgetSwapsApplied": budget_stats["swapsApplied"],
-                "budgetMealsDropped": budget_stats["mealsDropped"],
-                "budgetMet": budget_stats["budgetMet"],
-                "preBudgetEstimatedTotalCost": estimated_total_cost,
-                "groceryItemCount": len(grocery_list),
-                "mealHistoryAdded": meal_history_added,
-                "supersededPlansCount": superseded_count,
+                "mealCount": len(name_pass_response.mealPlan),
                 "planPath": f"users/{request.userId}/plans/{plan_id}",
                 "todoFlow": TODO_FLOW,
                 "timing": {
                     "startedAt": plan_started_at.isoformat(),
-                    "geminiDurationSeconds": gemini_duration_seconds,
-                    "totalDurationSeconds": total_duration_seconds,
+                    "firstPassDurationSeconds": first_pass_duration_seconds,
                 },
             },
         )
@@ -948,9 +1168,8 @@ def generate_and_store_plan(request: PlanGenerationRequest) -> PlanGenerationRes
             update_plan_status(request.userId, plan_id, "failed")
         except Exception:
             pass
+        if request_id:
+            release_generation_lock(request.userId, request_id, lock_final_status)
         if isinstance(exc, ValueError):
             raise
         raise ValueError(f"Failed to generate/store plan: {exc}") from exc
-    finally:
-        if request_id:
-            release_generation_lock(request.userId, request_id, lock_final_status)

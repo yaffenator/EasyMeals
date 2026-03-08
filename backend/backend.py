@@ -163,8 +163,11 @@ def get_plan(user_id: str, authorization: str | None = Header(default=None)):
     if not plan_docs:
         raise HTTPException(status_code=404, detail=f"No plans found for user {user_id}.")
 
-    ready_docs = [doc for doc in plan_docs if (doc.to_dict() or {}).get("status") == "ready"]
-    candidate_docs = ready_docs if ready_docs else plan_docs
+    candidate_docs = [
+        doc for doc in plan_docs if (doc.to_dict() or {}).get("status") in {"generating", "ready"}
+    ]
+    if not candidate_docs:
+        candidate_docs = plan_docs
     candidate_docs.sort(key=_plan_sort_key, reverse=True)
     latest_doc = candidate_docs[0]
     latest_data = latest_doc.to_dict() or {}

@@ -1,4 +1,5 @@
 import json
+import time
 from unittest.mock import patch
 
 import pytest
@@ -99,3 +100,12 @@ def test_generate_meal_plan_builds_prompt_and_calls_service():
 
         assert result.mealPlan[0].mealType == "Breakfast"
         mock_call.assert_called_once()
+
+
+def test_call_gemini_times_out_and_raises():
+    with patch("db.gemini_service.GEMINI_CALL_TIMEOUT_SECONDS", 1):
+        with patch("db.gemini_service._generate_raw_response", side_effect=lambda _: time.sleep(2)):
+            from db.gemini_service import call_gemini
+
+            with pytest.raises(ValueError, match="Gemini failed after"):
+                call_gemini("prompt", retries=1)
