@@ -80,12 +80,14 @@ def test_call_gemini_retries_on_invalid_then_succeeds():
 def test_call_gemini_normalizes_meal_type_to_dinner():
     payload = _valid_payload()
     payload["mealPlan"][0]["mealType"] = "Breakfast"
+    payload["mealPlan"][0]["instructions"] = "1. Mix oats. 2. Cook. 3. Serve."
 
     with patch("db.gemini_service._generate_raw_response", return_value=json.dumps(payload)):
         from db.gemini_service import call_gemini
 
         result = call_gemini("prompt", retries=1)
         assert result.mealPlan[0].mealType == "Dinner"
+        assert result.mealPlan[0].instructions == "Mix oats. Cook. Serve."
 
 
 def test_call_gemini_raises_after_retry_exhaustion():

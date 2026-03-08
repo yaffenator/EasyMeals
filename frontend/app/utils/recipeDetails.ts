@@ -61,6 +61,35 @@ function toMoneyString(value: string | number | undefined): string {
   return '$0.00';
 }
 
+function stripLeadingStepNumber(step: string): string {
+  return step.replace(/^\s*\d+\s*[\).\:-]?\s*/, '').trim();
+}
+
+function parseInstructionText(raw: string): string[] {
+  const text = raw.trim();
+  if (!text) return [];
+
+  const numberedMatches = Array.from(
+    text.matchAll(/(?:^|\s)\d+[.)]\s*([\s\S]*?)(?=(?:\s+\d+[.)]\s)|$)/g),
+  )
+    .map((match) => (match[1] || '').trim())
+    .filter(Boolean)
+    .map(stripLeadingStepNumber);
+  if (numberedMatches.length >= 2) return numberedMatches;
+
+  if (text.includes('\n')) {
+    return text
+      .split('\n')
+      .map((line) => stripLeadingStepNumber(line))
+      .filter(Boolean);
+  }
+
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((line) => stripLeadingStepNumber(line))
+    .filter(Boolean);
+}
+
 export function generateRecipeDetails(input: RecipeLike): DetailedRecipe {
   const servings = typeof input.servings === 'number' && input.servings > 0 ? input.servings : 1;
   const totalCost = toMoneyString(input.totalCost ?? input.cost);
@@ -73,21 +102,10 @@ export function generateRecipeDetails(input: RecipeLike): DetailedRecipe {
 
   const parsedInstructions = (() => {
     if (Array.isArray(input.instructions)) {
-      return input.instructions.map((step) => String(step).trim()).filter(Boolean);
+      return input.instructions.map((step) => stripLeadingStepNumber(String(step))).filter(Boolean);
     }
     if (typeof input.instructions === 'string') {
-      const raw = input.instructions.trim();
-      if (!raw) return [];
-      if (raw.includes('\n')) {
-        return raw
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean);
-      }
-      return raw
-        .split(/(?<=[.!?])\s+/)
-        .map((line) => line.trim())
-        .filter(Boolean);
+      return parseInstructionText(input.instructions);
     }
     return [];
   })();

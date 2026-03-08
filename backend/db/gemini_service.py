@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import threading
 from typing import Any, Optional, TypeVar
 
@@ -101,6 +102,23 @@ def _run_with_timeout(func: Any, *args: Any, timeout_seconds: int) -> Any:
     return result.get("value")
 
 
+def _normalize_instruction_text(value: str) -> str:
+    text = " ".join((value or "").replace("\n", " ").split())
+    if not text:
+        return ""
+
+    numbered_items = re.findall(
+        r"(?:^|\s)\d+[.)]\s*([\s\S]*?)(?=(?:\s+\d+[.)]\s)|$)",
+        text,
+    )
+    if len(numbered_items) >= 2:
+        cleaned = [item.strip().rstrip(".!?") for item in numbered_items if item.strip()]
+        if cleaned:
+            return ". ".join(cleaned) + "."
+
+    return text
+
+
 def build_prompt(preferences: dict[str, Any]) -> str:
     return f"""
 You are a professional nutritionist and chef. Generate a 4-week meal plan.
@@ -120,6 +138,8 @@ Rules:
 - Include practical ingredient measurements.
 - Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
 - Do not invent, rename, singularize, or pluralize ingredient IDs between sections.
+- `instructions` must be one plain string of sentence steps separated by period+space.
+- Do not include numbering (e.g. `1.`), bullets, markdown, or newline separators in `instructions`.
 - Return only raw JSON with no markdown.
 
 Return JSON with this exact top-level shape:
@@ -137,7 +157,7 @@ Return JSON with this exact top-level shape:
       "costPerServing": 2.5,
       "mealType": "Dinner",
       "difficulty": "Easy",
-      "instructions": "Step-by-step instructions in one string.",
+      "instructions": "Heat oil in a pan. Add ingredients and cook through. Season and serve warm.",
       "tags": ["budget-friendly"],
       "tips": "Optional helpful tip",
       "source": "generated",
@@ -231,6 +251,8 @@ Rules:
 - Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
 - Do not invent, rename, singularize, or pluralize ingredient IDs between sections.
 - Keep instructions clear and concise.
+- `meal.instructions` must be one plain string of sentence steps separated by period+space.
+- Do not include numbering (e.g. `1.`), bullets, markdown, or newline separators in `meal.instructions`.
 - Return only raw JSON with no markdown.
 
 Return JSON with this exact top-level shape:
@@ -247,7 +269,7 @@ Return JSON with this exact top-level shape:
     "costPerServing": 2.5,
     "mealType": "{meal_outline.mealType}",
     "difficulty": "Easy",
-    "instructions": "Step-by-step instructions in one string.",
+    "instructions": "Heat oil in a pan. Add ingredients and cook through. Season and serve warm.",
     "tags": ["budget-friendly"],
     "tips": "Optional helpful tip",
     "source": "generated",
@@ -365,6 +387,7 @@ def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     response = _call_and_parse(prompt, GeminiResponse, retries=retries)
     for meal in response.mealPlan:
         meal.mealType = "Dinner"
+        meal.instructions = _normalize_instruction_text(meal.instructions)
     return response
 
 
@@ -392,4 +415,5 @@ def generate_meal_details(
     prompt = build_meal_detail_prompt(preferences, meal_outline)
     response = _call_and_parse(prompt, MealDetailResponse, retries=retries)
     response.meal.mealType = "Dinner"
+    response.meal.instructions = _normalize_instruction_text(response.meal.instructions)
     return response
