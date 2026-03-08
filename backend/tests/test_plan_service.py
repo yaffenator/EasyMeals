@@ -132,37 +132,39 @@ def test_get_next_plan_version_increments_for_same_month():
             assert get_next_plan_version("user_1", "2026-03") == 4
 
 
-def test_generate_and_store_plan_releases_lock_after_success():
+def test_generate_and_store_plan_starts_background_second_pass():
     with patch("db.firestore_client.db", MagicMock()):
+        from db.gemini_service import MealOutline
         from db.plan_service import PlanGenerationRequest, generate_and_store_plan
 
         request = PlanGenerationRequest(**_valid_request_kwargs())
-        fake_gemini = MagicMock(mealPlan=[], ingredientPrices={})
+        outlines = [
+            MealOutline(name=f"Meal {i+1}", mealType="Dinner", day="Monday", description="Placeholder")
+            for i in range(28)
+        ]
+        name_pass = MagicMock(mealPlan=outlines)
 
         with patch("db.plan_service.db", MagicMock()):
             with patch("db.plan_service.resolve_target_month", return_value="2026-03"):
                 with patch("db.plan_service.get_next_plan_version", return_value=1):
-                    with patch("db.plan_service.acquire_generation_lock", return_value=("req_1", datetime.now(timezone.utc))):
-                        with patch("db.plan_service.persist_user_plan"):
-                            with patch("db.plan_service.generate_meal_plan", return_value=fake_gemini):
-                                with patch("db.plan_service.upsert_ingredient_prices", return_value={}):
-                                    with patch("db.plan_service.build_normalized_name_map", return_value={}):
-                                        with patch("db.plan_service.build_price_hint_map", return_value={}):
-                                            with patch("db.plan_service.recalculate_meal_costs", return_value=([], 0.0)):
-                                                with patch("db.plan_service.dedupe_or_create_recipes", return_value=([], {"recipesCreated": 0, "recipesReused": 0})):
-                                                    with patch("db.plan_service.apply_diversity_selection", return_value=([], {"scoredCount": 0, "selectedCount": 0})):
-                                                        with patch("db.plan_service.enforce_budget_with_swaps", return_value=([], {"budgetExceededInitially": False, "swapsApplied": 0, "mealsDropped": 0, "finalTotalCost": 0.0, "budgetMet": True})):
-                                                            with patch("db.plan_service.aggregate_grocery_list", return_value=[]):
-                                                                with patch("db.plan_service.chunk_meals_into_weeks", return_value=[]):
-                                                                    with patch("db.plan_service.supersede_ready_plans_for_month", return_value=0):
-                                                                        with patch("db.plan_service.append_meal_history", return_value=0):
-                                                                            with patch("db.plan_service.release_generation_lock") as mock_release:
-                                                                                generate_and_store_plan(request)
+                    with patch(
+                        "db.plan_service.acquire_generation_lock",
+                        return_value=("req_1", datetime.now(timezone.utc)),
+                    ):
+                        with patch("db.plan_service.generate_meal_name_plan", return_value=name_pass):
+                            with patch("db.plan_service.persist_user_plan"):
+                                with patch("db.plan_service._set_plan_progress"):
+                                    with patch("db.plan_service._submit_plan_generation_job") as mock_submit:
+                                        with patch("db.plan_service.release_generation_lock") as mock_release:
+                                            response = generate_and_store_plan(request)
 
-        mock_release.assert_called_once_with("user_1", "req_1", "ready")
+        assert response.status == "generating"
+        assert response.planId.startswith("plan_")
+        mock_submit.assert_called_once()
+        mock_release.assert_not_called()
 
 
-def test_generate_and_store_plan_releases_lock_after_exception():
+def test_generate_and_store_plan_releases_lock_when_first_pass_fails():
     with patch("db.firestore_client.db", MagicMock()):
         from db.plan_service import PlanGenerationRequest, generate_and_store_plan
 
@@ -170,12 +172,14 @@ def test_generate_and_store_plan_releases_lock_after_exception():
         with patch("db.plan_service.db", MagicMock()):
             with patch("db.plan_service.resolve_target_month", return_value="2026-03"):
                 with patch("db.plan_service.get_next_plan_version", return_value=1):
-                    with patch("db.plan_service.acquire_generation_lock", return_value=("req_1", datetime.now(timezone.utc))):
-                        with patch("db.plan_service.persist_user_plan"):
-                            with patch("db.plan_service.generate_meal_plan", side_effect=RuntimeError("boom")):
-                                with patch("db.plan_service.update_plan_status"):
-                                    with patch("db.plan_service.release_generation_lock") as mock_release:
-                                        with pytest.raises(ValueError, match="Failed to generate/store plan"):
-                                            generate_and_store_plan(request)
+                    with patch(
+                        "db.plan_service.acquire_generation_lock",
+                        return_value=("req_1", datetime.now(timezone.utc)),
+                    ):
+                        with patch("db.plan_service.generate_meal_name_plan", side_effect=RuntimeError("boom")):
+                            with patch("db.plan_service.update_plan_status"):
+                                with patch("db.plan_service.release_generation_lock") as mock_release:
+                                    with pytest.raises(ValueError, match="Failed to generate/store plan"):
+                                        generate_and_store_plan(request)
 
         mock_release.assert_called_once_with("user_1", "req_1", "failed")

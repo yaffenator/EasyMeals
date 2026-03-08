@@ -31,4 +31,30 @@ describe("generateRecipeDetails instructions normalization", () => {
       "Serve warm.",
     ]);
   });
+
+  it("normalizes inline numbered instructions", () => {
+    const details = generateRecipeDetails({
+      name: "Test Meal",
+      day: "Monday",
+      instructions: "1. Heat pan. 2. Add ingredients. 3. Serve.",
+    });
+    expect(details.instructions).toEqual([
+      "Heat pan.",
+      "Add ingredients.",
+      "Serve.",
+    ]);
+  });
+
+  it("normalizes newline numbered instructions", () => {
+    const details = generateRecipeDetails({
+      name: "Test Meal",
+      day: "Monday",
+      instructions: "1. Heat pan\n2. Add ingredients\n3. Serve",
+    });
+    expect(details.instructions).toEqual([
+      "Heat pan",
+      "Add ingredients",
+      "Serve",
+    ]);
+  });
 });

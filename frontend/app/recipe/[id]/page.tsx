@@ -84,7 +84,11 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     setRatingSuccess(null);
 
     try {
-      const idToken = await auth.currentUser.getIdToken();
+      const signedInUser = auth.currentUser;
+      if (!signedInUser) {
+        throw new Error("You must be signed in to rate a meal.");
+      }
+      const idToken = await signedInUser.getIdToken();
       const response = await fetch('/api/plan/rate', {
         method: 'POST',
         headers: {
@@ -132,7 +136,7 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
     }
   };
 
-  const detailedRecipe = generateRecipeDetails(recipe);
+  const detailedRecipe = generateRecipeDetails(recipe as Record<string, unknown>);
   const imagePending =
     !detailedRecipe.image || String(detailedRecipe.image).startsWith('/api/placeholder');
 

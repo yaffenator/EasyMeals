@@ -210,7 +210,10 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
             carbs: meal.carbs != null ? `${meal.carbs}g` : "0g",
             fat: meal.fat != null ? `${meal.fat}g` : "0g",
             protein: meal.protein != null ? `${meal.protein}g` : "0g",
-            status: "completed",
+            status:
+              typeof meal.status === "string" && meal.status.length > 0
+                ? meal.status
+                : "pending",
           })),
         })),
         createdAt: new Date().toISOString(),
