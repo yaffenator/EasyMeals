@@ -15,13 +15,7 @@ import { Button } from "../components/ui/button";
 import ImageWithFallback from "../components/Figma/imageWithFallback";
 import { MealPlanWizard } from "../components/MealPlanWizard";
 import Link from "next/link";
-import {
-  Clock,
-  DollarSign,
-  Calendar,
-  Soup,
-  ChefHat,
-} from "lucide-react";
+import { Clock, DollarSign, Calendar, Soup, ChefHat } from "lucide-react";
 import { useAuth } from "../context/auth";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../firebase";
@@ -65,29 +59,49 @@ const parseMinutes = (value: unknown): number => {
   return 0;
 };
 
-const formatCurrency = (value: unknown): string => `$${parseMoney(value).toFixed(2)}`;
-const imageBadgeForMeal = (meal: DashboardMeal): { label: string; className: string } | null => {
-  const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
+const formatCurrency = (value: unknown): string =>
+  `$${parseMoney(value).toFixed(2)}`;
+const imageBadgeForMeal = (
+  meal: DashboardMeal,
+): { label: string; className: string } | null => {
+  const status =
+    typeof meal.imageGenStatus === "string"
+      ? meal.imageGenStatus.toLowerCase()
+      : "";
   if (status === "failed") {
     return { label: "Image Failed", className: "bg-red-100 text-red-800" };
   }
   if (status === "pending") {
-    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+    return {
+      label: "Image Pending",
+      className: "bg-secondary text-secondary-foreground",
+    };
   }
   const value = meal.image;
   if (typeof value !== "string") {
-    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+    return {
+      label: "Image Pending",
+      className: "bg-secondary text-secondary-foreground",
+    };
   }
   const trimmed = value.trim();
-  if (!trimmed || trimmed.startsWith("/api/placeholder") || trimmed.startsWith("/meal-placeholder")) {
-    return { label: "Image Pending", className: "bg-secondary text-secondary-foreground" };
+  if (
+    !trimmed ||
+    trimmed.startsWith("/api/placeholder") ||
+    trimmed.startsWith("/meal-placeholder")
+  ) {
+    return {
+      label: "Image Pending",
+      className: "bg-secondary text-secondary-foreground",
+    };
   }
   return null;
 };
 
 export default function Dashboard() {
   // 1. Replace local state with Global Context
-  const { mealPlan, setMealPlan, isLoading, refreshPlan, imageSyncStatus } = useMealPlan();
+  const { mealPlan, setMealPlan, isLoading, refreshPlan, imageSyncStatus } =
+    useMealPlan();
 
   const [showWizard, setShowWizard] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(1);
@@ -150,7 +164,10 @@ export default function Dashboard() {
   };
 
   const displayName = auth.currentUser?.displayName || currentUser?.displayName;
-  const emailName = auth.currentUser?.email?.split("@")[0] || currentUser?.email?.split("@")[0] || "Chef";
+  const emailName =
+    auth.currentUser?.email?.split("@")[0] ||
+    currentUser?.email?.split("@")[0] ||
+    "Chef";
   const prefBudget =
     mealPlan &&
     mealPlan.preferences &&
@@ -165,7 +182,9 @@ export default function Dashboard() {
         <DashboardHeading />
         <main className="container mx-auto px-4 py-16">
           <div className="max-w-2xl mx-auto text-center">
-            <p className="text-lg text-muted-foreground">Loading your meal plan...</p>
+            <p className="text-lg text-muted-foreground">
+              Loading your meal plan...
+            </p>
           </div>
         </main>
       </div>
@@ -185,7 +204,8 @@ export default function Dashboard() {
             </h1>
             <p className="text-lg text-muted-foreground mb-8">
               It looks like you have not generated your personalized plan yet.
-              Let&apos;s create a 4-week meal plan tailored to your budget and goals.
+              Let&apos;s create a 4-week meal plan tailored to your budget and
+              goals.
             </p>
             <Button
               size="lg"
@@ -220,12 +240,11 @@ export default function Dashboard() {
   const currentWeek = mealPlanWeeks[selectedWeek - 1] || { meals: [] };
   const currentWeekMeals = currentWeek.meals || [];
 
-  const totalWeeklyCost =
-    currentWeekMeals.reduce(
-      (sum: number, meal: DashboardMeal) =>
-        sum + parseMoney(meal.costPerServing ?? meal.totalCost ?? 0),
-      0,
-    );
+  const totalWeeklyCost = currentWeekMeals.reduce(
+    (sum: number, meal: DashboardMeal) =>
+      sum + parseMoney(meal.costPerServing ?? meal.totalCost ?? 0),
+    0,
+  );
 
   const avgPrepTime = currentWeekMeals.length
     ? currentWeekMeals.reduce(
@@ -240,9 +259,7 @@ export default function Dashboard() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl text-primary mb-2">
-            Hello,{" "}
-            {displayName || emailName}
-            !
+            Hello, {displayName || emailName}!
           </h1>
           <p className="text-muted-foreground">
             Recipes optimized for your $
@@ -250,7 +267,8 @@ export default function Dashboard() {
           </p>
           {imageSyncStatus === "syncing" && (
             <p className="mt-2 text-sm text-muted-foreground">
-              Generating meal images in the background. This page auto-refreshes every ~10 seconds.
+              Generating meal images in the background. This page auto-refreshes
+              every ~10 seconds.
             </p>
           )}
           {imageSyncStatus === "ready" && (
@@ -260,7 +278,8 @@ export default function Dashboard() {
           )}
           {imageSyncStatus === "timeout" && (
             <p className="mt-2 text-sm text-amber-700">
-              Image generation is taking longer than expected. Use Refresh Plan to check latest status.
+              Image generation is taking longer than expected. Use Refresh Plan
+              to check latest status.
             </p>
           )}
         </div>
@@ -275,16 +294,14 @@ export default function Dashboard() {
             {mealPlanWeeks.map((week: DashboardWeek, index: number) => {
               const weekNumber = week.weekNumber || index + 1;
               return (
-              <Button
-                key={weekNumber}
-                variant={
-                  selectedWeek === weekNumber ? "default" : "outline"
-                }
-                onClick={() => setSelectedWeek(weekNumber)}
-                className={selectedWeek === weekNumber ? "bg-primary" : ""}
-              >
-                Week {weekNumber}
-              </Button>
+                <Button
+                  key={weekNumber}
+                  variant={selectedWeek === weekNumber ? "default" : "outline"}
+                  onClick={() => setSelectedWeek(weekNumber)}
+                  className={selectedWeek === weekNumber ? "bg-primary" : ""}
+                >
+                  Week {weekNumber}
+                </Button>
               );
             })}
           </div>
@@ -328,7 +345,9 @@ export default function Dashboard() {
                         {meal.day}
                       </Badge>
                       {imageBadge && (
-                        <Badge className={`absolute top-3 left-3 ${imageBadge.className}`}>
+                        <Badge
+                          className={`absolute top-3 left-3 ${imageBadge.className}`}
+                        >
                           {imageBadge.label}
                         </Badge>
                       )}
@@ -345,7 +364,10 @@ export default function Dashboard() {
                           <Clock className="w-4 h-4" /> {meal.prepTime}
                         </div>
                         <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" /> {formatCurrency(meal.costPerServing ?? meal.totalCost)}
+                          <DollarSign className="w-4 h-4" />{" "}
+                          {formatCurrency(
+                            meal.costPerServing ?? meal.totalCost,
+                          )}
                         </div>
                         <div className="flex items-center gap-1">
                           <Soup className="w-4 h-4" /> {meal.calories || 0} cal
@@ -364,7 +386,12 @@ export default function Dashboard() {
           <Button size="lg" onClick={handleGenerateNew}>
             Generate New Plan
           </Button>
-          <Button size="lg" variant="outline" onClick={handleRefreshPlan} disabled={isRefreshingPlan}>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={handleRefreshPlan}
+            disabled={isRefreshingPlan}
+          >
             {isRefreshingPlan ? "Refreshing..." : "Refresh Plan"}
           </Button>
           <Button size="lg" variant="outline">
@@ -372,7 +399,6 @@ export default function Dashboard() {
           </Button>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

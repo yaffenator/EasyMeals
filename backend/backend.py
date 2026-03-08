@@ -6,15 +6,22 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import firebase_admin
 from pydantic import BaseModel, ValidationError
 from dotenv import load_dotenv
 from firebase_admin import auth as firebase_auth
+from firebase_admin import credentials
 
 load_dotenv()
 
 from db.firestore_client import db
 from db.plan_service import GenerationConflictError, PlanGenerationRequest, generate_and_store_plan
 from db.rating_service import rate_meal
+
+if not firebase_admin._apps:
+    # Point this to wherever you saved your Firebase service account key JSON file
+    cred = credentials.Certificate("secrets/serviceAccountKey.json") 
+    firebase_admin.initialize_app(cred)
 
 app = FastAPI(title="EasyMeals Backend API")
 

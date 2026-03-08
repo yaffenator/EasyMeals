@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 GEMINI_MODEL = "gemini-3-flash-preview"
 DEFAULT_RETRIES = 3
 
-
 class IngredientItem(BaseModel):
     ingredientId: str
     originalText: str

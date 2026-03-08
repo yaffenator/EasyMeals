@@ -14,10 +14,7 @@ import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radioGroup";
 import { Checkbox } from "./ui/checkbox";
 import { ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
-import {
-  updateUserPreferences,
-  auth,
-} from "../firebase";
+import { updateUserPreferences, auth } from "../firebase";
 
 interface MealPlanWizardProps {
   onComplete: (data: unknown) => void;
@@ -125,7 +122,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
     try {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error("No user ID found");
-      const idToken = await auth.currentUser.getIdToken();
+      const idToken = await auth.currentUser!.getIdToken();
 
       // 1. Update user profile in Firestore
       await updateUserPreferences(uid, finalData);
@@ -159,7 +156,9 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         }
 
         if (response.status === 409) {
-          throw new Error("A meal plan is already generating for your account. Please wait and retry.");
+          throw new Error(
+            "A meal plan is already generating for your account. Please wait and retry.",
+          );
         }
         if (response.status === 400) {
           throw new Error(`Please fix your inputs: ${detail}`);
@@ -173,7 +172,8 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
         throw new Error(detail);
       }
 
-      const responseData = (await response.json()) as BackendGeneratePlanResponse;
+      const responseData =
+        (await response.json()) as BackendGeneratePlanResponse;
 
       // 3. Transform backend response into current dashboard-compatible shape.
       const generatedMealPlan = {
@@ -189,15 +189,17 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
           weekNumber: (week.weekIndex ?? 0) + 1,
           meals: (week.meals || []).map((meal: BackendMeal, idx: number) => ({
             ...meal,
-            day: meal.day || [
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-              "Saturday",
-              "Sunday",
-            ][idx % 7],
+            day:
+              meal.day ||
+              [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+              ][idx % 7],
             instructions: Array.isArray(meal.instructions)
               ? meal.instructions
               : typeof meal.instructions === "string"
@@ -216,13 +218,14 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
       // 4. Pass generated plan to parent (Dashboard)
       onComplete(generatedMealPlan);
-      
     } catch (error) {
       console.error("Error during setup:", error);
       if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Something went wrong. Please check your connection and try again.");
+        setErrorMessage(
+          "Something went wrong. Please check your connection and try again.",
+        );
       }
     } finally {
       setIsSaving(false);
@@ -260,14 +263,18 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
         <CardHeader className="border-b">
-          <CardTitle className="text-2xl text-primary">Meal Plan Setup</CardTitle>
+          <CardTitle className="text-2xl text-primary">
+            Meal Plan Setup
+          </CardTitle>
           <CardDescription>Step {step} of 5</CardDescription>
         </CardHeader>
 
         <CardContent className="pt-6">
           {step === 1 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-medium">What is your monthly food budget?</h3>
+              <h3 className="text-xl font-medium">
+                What is your monthly food budget?
+              </h3>
               <div className="space-y-2">
                 <Label htmlFor="budget">Budget in USD ($)</Label>
                 <Input
@@ -289,10 +296,14 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
           {step === 2 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-medium">What is your primary goal?</h3>
+              <h3 className="text-xl font-medium">
+                What is your primary goal?
+              </h3>
               <RadioGroup
                 value={goal}
-                onValueChange={(v) => setGoal(v as "lose" | "gain" | "maintain")}
+                onValueChange={(v) =>
+                  setGoal(v as "lose" | "gain" | "maintain")
+                }
                 className="grid gap-3"
               >
                 {["lose", "maintain", "gain"].map((g) => (
@@ -310,7 +321,9 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
           {step === 3 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-medium">What is your current weight?</h3>
+              <h3 className="text-xl font-medium">
+                What is your current weight?
+              </h3>
               <div className="space-y-2">
                 <Label htmlFor="weight">Weight (lbs)</Label>
                 <Input
@@ -341,7 +354,9 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                       checked={selectedAllergies.includes(a)}
                       onCheckedChange={() =>
                         setSelectedAllergies((prev) =>
-                          prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a],
+                          prev.includes(a)
+                            ? prev.filter((x) => x !== a)
+                            : [...prev, a],
                         )
                       }
                     />
@@ -373,8 +388,10 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
 
           {timedOutGeneration && (
             <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              If this was a timeout, your backend generation may still complete shortly. You can close this
-              wizard and click <span className="font-medium">Check for Completed Plan</span> on the dashboard.
+              If this was a timeout, your backend generation may still complete
+              shortly. You can close this wizard and click{" "}
+              <span className="font-medium">Check for Completed Plan</span> on
+              the dashboard.
             </p>
           )}
 
@@ -388,7 +405,11 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
               {step === 1 ? "Cancel" : "Back"}
             </Button>
 
-            <Button onClick={handleNext} disabled={!canProceed() || isSaving} className="bg-primary">
+            <Button
+              onClick={handleNext}
+              disabled={!canProceed() || isSaving}
+              className="bg-primary"
+            >
               {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
