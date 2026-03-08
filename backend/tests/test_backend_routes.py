@@ -85,7 +85,7 @@ def test_generate_plan_success_returns_hardening_fields():
     assert body["metadata"]["planVersion"] == 2
 
 
-def test_get_plan_prefers_latest_ready_plan():
+def test_get_plan_prefers_latest_active_plan():
     module = _load_app_module()
     client = TestClient(module.app)
 
@@ -124,4 +124,4 @@ def test_get_plan_prefers_latest_ready_plan():
         response = client.get("/api/get-plan/user_1")
 
     assert response.status_code == 200
-    assert response.json()["planId"] == "plan_ready_new"
+    assert response.json()["planId"] == "plan_generating"

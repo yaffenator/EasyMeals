@@ -32,12 +32,14 @@ type MealPlanContextValue = {
   setMealPlan: React.Dispatch<React.SetStateAction<MealPlan | null>>;
   isLoading: boolean;
   error: string | null;
-  refreshPlan: (options?: { silent?: boolean }) => Promise<void>;
+  refreshPlan: (options?: { silent?: boolean }) => Promise<MealPlan | null>;
   lastRefreshAt: number;
   imageSyncStatus: "idle" | "syncing" | "ready" | "timeout";
 };
 
 const MealPlanContext = createContext<MealPlanContextValue | null>(null);
+const PLAN_POLL_INTERVAL_MS = 8_000;
+const PLAN_POLL_MAX_DURATION_MS = 8 * 60_000;
 const IMAGE_POLL_INTERVAL_MS = 10_000;
 const IMAGE_POLL_MAX_DURATION_MS = 5 * 60_000;
 
@@ -70,6 +72,12 @@ function normalizePlan(raw: unknown): MealPlan | null {
 
       return {
         ...mealObj,
+        status:
+          typeof mealObj.status === "string"
+            ? mealObj.status
+            : typeof nestedPlan.status === "string" && nestedPlan.status.toLowerCase() === "ready"
+              ? "completed"
+              : "pending",
         day:
           typeof mealObj.day === "string"
             ? mealObj.day
@@ -117,9 +125,42 @@ function hasPendingImages(plan: MealPlan | null): boolean {
     for (const meal of week.meals) {
       const imageValue = typeof meal.image === "string" ? meal.image.trim() : "";
       const status = typeof meal.imageGenStatus === "string" ? meal.imageGenStatus.toLowerCase() : "";
-      const missingImage =
-        !imageValue || imageValue.startsWith("/api/placeholder") || imageValue.startsWith("/meal-placeholder");
-      if (status === "pending" || (missingImage && status !== "failed")) {
+      const hasUsableImage =
+        !!imageValue &&
+        !imageValue.startsWith("/api/placeholder") &&
+        !imageValue.startsWith("/meal-placeholder");
+      if (hasUsableImage) {
+        continue;
+      }
+      if (status !== "failed") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function hasPendingMealDetails(plan: MealPlan | null): boolean {
+  if (!plan) return false;
+  const planStatus = typeof plan.status === "string" ? plan.status.toLowerCase() : "";
+  if (planStatus === "generating") return true;
+  for (const week of plan.weeks) {
+    for (const meal of week.meals) {
+      const status = typeof meal.status === "string" ? meal.status.toLowerCase() : "";
+      if (!status || status === "pending") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function hasCompletedMeals(plan: MealPlan | null): boolean {
+  if (!plan) return false;
+  for (const week of plan.weeks) {
+    for (const meal of week.meals) {
+      const status = typeof meal.status === "string" ? meal.status.toLowerCase() : "";
+      if (status === "completed") {
         return true;
       }
     }
@@ -137,15 +178,18 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
   const imagePollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const imagePollStartedAtRef = useRef<number | null>(null);
   const imageReadyNoticeShownRef = useRef<Set<string>>(new Set());
+  const planPollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const planPollStartedAtRef = useRef<number | null>(null);
 
   const fetchLatestPlan = useCallback(async (options?: { silent?: boolean }) => {
     const silent = Boolean(options?.silent);
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
+    const user = auth.currentUser;
+    if (!user?.uid) {
       setMealPlan(null);
       setIsLoading(false);
       return null;
     }
+    const uid = user.uid;
 
     if (!silent) {
       setIsLoading(true);
@@ -153,7 +197,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const idToken = await auth.currentUser.getIdToken();
+      const idToken = await user.getIdToken();
       const response = await fetch(`/api/plan/latest?userId=${encodeURIComponent(uid)}`, {
         method: "GET",
         headers: {
@@ -204,11 +248,12 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
 
     const planKey = mealPlan.planId || `anon-${mealPlan.createdAt || "unknown"}`;
     if (imageTriggerByPlan.current.has(planKey)) return;
+    if (!hasCompletedMeals(mealPlan)) return;
 
     const hasMissingImage = mealPlan.weeks.some((week) =>
       week.meals.some((meal) => {
         const src = typeof meal.image === "string" ? meal.image.trim() : "";
-        return !src || src.startsWith("/api/placeholder");
+        return !src || src.startsWith("/api/placeholder") || src.startsWith("/meal-placeholder");
       }),
     );
 
@@ -226,6 +271,64 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!mealPlan) {
+      if (planPollIntervalRef.current) {
+        clearInterval(planPollIntervalRef.current);
+        planPollIntervalRef.current = null;
+      }
+      planPollStartedAtRef.current = null;
+      return;
+    }
+
+    if (!hasPendingMealDetails(mealPlan)) {
+      if (planPollIntervalRef.current) {
+        clearInterval(planPollIntervalRef.current);
+        planPollIntervalRef.current = null;
+      }
+      planPollStartedAtRef.current = null;
+      return;
+    }
+
+    if (planPollIntervalRef.current) return;
+
+    planPollStartedAtRef.current = Date.now();
+    planPollIntervalRef.current = setInterval(async () => {
+      const startedAt = planPollStartedAtRef.current ?? Date.now();
+      if (Date.now() - startedAt > PLAN_POLL_MAX_DURATION_MS) {
+        if (planPollIntervalRef.current) {
+          clearInterval(planPollIntervalRef.current);
+          planPollIntervalRef.current = null;
+        }
+        return;
+      }
+
+      const latest = await fetchLatestPlan({ silent: true });
+      if (!hasPendingMealDetails(latest)) {
+        if (planPollIntervalRef.current) {
+          clearInterval(planPollIntervalRef.current);
+          planPollIntervalRef.current = null;
+        }
+      }
+    }, PLAN_POLL_INTERVAL_MS);
+
+    return () => {
+      if (planPollIntervalRef.current) {
+        clearInterval(planPollIntervalRef.current);
+        planPollIntervalRef.current = null;
+      }
+    };
+  }, [mealPlan, fetchLatestPlan]);
+
+  useEffect(() => {
+    if (!mealPlan) {
+      setImageSyncStatus("idle");
+      if (imagePollIntervalRef.current) {
+        clearInterval(imagePollIntervalRef.current);
+        imagePollIntervalRef.current = null;
+      }
+      imagePollStartedAtRef.current = null;
+      return;
+    }
+    if (!hasCompletedMeals(mealPlan)) {
       setImageSyncStatus("idle");
       if (imagePollIntervalRef.current) {
         clearInterval(imagePollIntervalRef.current);

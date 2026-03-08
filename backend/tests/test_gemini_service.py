@@ -1,4 +1,5 @@
 import json
+import time
 from unittest.mock import patch
 
 import pytest
@@ -17,7 +18,7 @@ def _valid_payload():
                 "cookTime": "10 minutes",
                 "servings": 1,
                 "costPerServing": 2.25,
-                "mealType": "Breakfast",
+                "mealType": "Dinner",
                 "difficulty": "Easy",
                 "instructions": "Mix oats and water and cook.",
                 "tags": ["budget-friendly"],
@@ -76,6 +77,19 @@ def test_call_gemini_retries_on_invalid_then_succeeds():
         assert result.mealPlan[0].name == "Oatmeal Bowl"
 
 
+def test_call_gemini_normalizes_meal_type_to_dinner():
+    payload = _valid_payload()
+    payload["mealPlan"][0]["mealType"] = "Breakfast"
+    payload["mealPlan"][0]["instructions"] = "1. Mix oats. 2. Cook. 3. Serve."
+
+    with patch("db.gemini_service._generate_raw_response", return_value=json.dumps(payload)):
+        from db.gemini_service import call_gemini
+
+        result = call_gemini("prompt", retries=1)
+        assert result.mealPlan[0].mealType == "Dinner"
+        assert result.mealPlan[0].instructions == "Mix oats. Cook. Serve."
+
+
 def test_call_gemini_raises_after_retry_exhaustion():
     with patch("db.gemini_service._generate_raw_response", return_value="not json"):
         from db.gemini_service import call_gemini
@@ -97,5 +111,14 @@ def test_generate_meal_plan_builds_prompt_and_calls_service():
         }
         result = generate_meal_plan(preferences, retries=2)
 
-        assert result.mealPlan[0].mealType == "Breakfast"
+        assert result.mealPlan[0].mealType == "Dinner"
         mock_call.assert_called_once()
+
+
+def test_call_gemini_times_out_and_raises():
+    with patch("db.gemini_service.GEMINI_CALL_TIMEOUT_SECONDS", 1):
+        with patch("db.gemini_service._generate_raw_response", side_effect=lambda _: time.sleep(2)):
+            from db.gemini_service import call_gemini
+
+            with pytest.raises(ValueError, match="Gemini failed after"):
+                call_gemini("prompt", retries=1)

@@ -33,6 +33,7 @@ type DashboardMeal = {
   totalCost?: string;
   costPerServing?: number | string;
   calories?: number;
+  status?: string;
   imageGenStatus?: string;
 };
 
@@ -61,9 +62,33 @@ const parseMinutes = (value: unknown): number => {
 
 const formatCurrency = (value: unknown): string =>
   `$${parseMoney(value).toFixed(2)}`;
+
+const detailBadgeForMeal = (
+  meal: DashboardMeal,
+): { label: string; className: string } | null => {
+  const status =
+    typeof meal.status === "string" ? meal.status.toLowerCase() : "";
+  if (status === "completed") return null;
+  if (status === "failed") {
+    return { label: "Details Failed", className: "bg-red-100 text-red-800" };
+  }
+  return {
+    label: "Details Pending",
+    className: "bg-amber-100 text-amber-800",
+  };
+};
+
 const imageBadgeForMeal = (
   meal: DashboardMeal,
 ): { label: string; className: string } | null => {
+  const value = meal.image;
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  const hasUsableImage =
+    !!trimmed &&
+    !trimmed.startsWith("/api/placeholder") &&
+    !trimmed.startsWith("/meal-placeholder");
+  if (hasUsableImage) return null;
+
   const status =
     typeof meal.imageGenStatus === "string"
       ? meal.imageGenStatus.toLowerCase()
@@ -77,25 +102,10 @@ const imageBadgeForMeal = (
       className: "bg-secondary text-secondary-foreground",
     };
   }
-  const value = meal.image;
-  if (typeof value !== "string") {
-    return {
-      label: "Image Pending",
-      className: "bg-secondary text-secondary-foreground",
-    };
-  }
-  const trimmed = value.trim();
-  if (
-    !trimmed ||
-    trimmed.startsWith("/api/placeholder") ||
-    trimmed.startsWith("/meal-placeholder")
-  ) {
-    return {
-      label: "Image Pending",
-      className: "bg-secondary text-secondary-foreground",
-    };
-  }
-  return null;
+  return {
+    label: "Image Pending",
+    className: "bg-secondary text-secondary-foreground",
+  };
 };
 
 export default function Dashboard() {
@@ -110,6 +120,10 @@ export default function Dashboard() {
 
   const router = useRouter();
   const { currentUser } = useAuth();
+  const typedCurrentUser = currentUser as
+    | { displayName?: string | null; email?: string | null }
+    | null
+    | undefined;
 
   // Auth check
   useEffect(() => {
@@ -143,8 +157,8 @@ export default function Dashboard() {
   // 2. The hydration logic (useEffect) has been REMOVED.
   // It now lives in MealPlanContext.tsx to allow background processing.
 
-  const handleCreateMealPlan = (fullMealPlan: MealPlan) => {
-    setMealPlan(fullMealPlan); // Updates the Global Context
+  const handleCreateMealPlan = (fullMealPlan: unknown) => {
+    setMealPlan(fullMealPlan as MealPlan); // Updates the Global Context
     setQuestionnaireCompleted(true);
     setShowWizard(false);
   };
@@ -163,10 +177,10 @@ export default function Dashboard() {
     }
   };
 
-  const displayName = auth.currentUser?.displayName || currentUser?.displayName;
+  const displayName = auth.currentUser?.displayName || typedCurrentUser?.displayName;
   const emailName =
     auth.currentUser?.email?.split("@")[0] ||
-    currentUser?.email?.split("@")[0] ||
+    typedCurrentUser?.email?.split("@")[0] ||
     "Chef";
   const prefBudget =
     mealPlan &&
@@ -265,6 +279,12 @@ export default function Dashboard() {
             Recipes optimized for your $
             {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
+          {(mealPlan.status || "").toLowerCase() === "generating" && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Building meal details in the background. Cards unlock as each meal
+              completes.
+            </p>
+          )}
           {imageSyncStatus === "syncing" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Generating meal images in the background. This page auto-refreshes
@@ -331,51 +351,74 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentWeekMeals.map((meal: DashboardMeal, index: number) => {
             const imageBadge = imageBadgeForMeal(meal);
+            const detailBadge = detailBadgeForMeal(meal);
+            const isMealReady =
+              typeof meal.status === "string"
+                ? meal.status.toLowerCase() === "completed"
+                : false;
+            const card = (
+              <Card
+                className={`overflow-hidden transition-shadow h-full ${
+                  isMealReady
+                    ? "hover:shadow-lg cursor-pointer"
+                    : "opacity-80 cursor-not-allowed"
+                }`}
+              >
+                <div className="relative h-48">
+                  <ImageWithFallback
+                    src={meal.image || "/meal-placeholder.svg"}
+                    alt={meal.name || "Meal image"}
+                    className="w-full h-full object-cover"
+                  />
+                  <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
+                    {meal.day}
+                  </Badge>
+                  {imageBadge && (
+                    <Badge
+                      className={`absolute top-3 left-3 ${imageBadge.className}`}
+                    >
+                      {imageBadge.label}
+                    </Badge>
+                  )}
+                  {detailBadge && (
+                    <Badge className={`absolute bottom-3 left-3 ${detailBadge.className}`}>
+                      {detailBadge.label}
+                    </Badge>
+                  )}
+                </div>
+                <CardHeader className="pb-0 pt-4">
+                  <CardTitle className="text-xl">{meal.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">
+                    {meal.description || "Meal details are still being generated."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />{" "}
+                      {meal.prepTime || (isMealReady ? "0 min" : "Pending")}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="w-4 h-4" />{" "}
+                      {isMealReady
+                        ? formatCurrency(meal.costPerServing ?? meal.totalCost)
+                        : "Pending"}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Soup className="w-4 h-4" />{" "}
+                      {isMealReady ? `${meal.calories || 0} cal` : "Pending"}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
             return (
               <div key={meal.id || `meal-${index}`} className="h-full">
-                <Link href={`/recipe/${meal.id}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    <div className="relative h-48">
-                      <ImageWithFallback
-                        src={meal.image || "/meal-placeholder.svg"}
-                        alt={meal.name || "Meal image"}
-                        className="w-full h-full object-cover"
-                      />
-                      <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground">
-                        {meal.day}
-                      </Badge>
-                      {imageBadge && (
-                        <Badge
-                          className={`absolute top-3 left-3 ${imageBadge.className}`}
-                        >
-                          {imageBadge.label}
-                        </Badge>
-                      )}
-                    </div>
-                    <CardHeader className="pb-0 pt-4">
-                      <CardTitle className="text-xl">{meal.name}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {meal.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {meal.prepTime}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="w-4 h-4" />{" "}
-                          {formatCurrency(
-                            meal.costPerServing ?? meal.totalCost,
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Soup className="w-4 h-4" /> {meal.calories || 0} cal
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                {isMealReady && meal.id ? (
+                  <Link href={`/recipe/${meal.id}`}>{card}</Link>
+                ) : (
+                  card
+                )}
               </div>
             );
           })}
