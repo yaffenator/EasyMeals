@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -87,6 +87,7 @@ TODO_FLOW = [
 
 PLAN_GENERATION_MAX_WORKERS = max(1, int(os.getenv("PLAN_GENERATION_MAX_WORKERS", "2")))
 PLAN_GENERATION_EXECUTOR = ThreadPoolExecutor(max_workers=PLAN_GENERATION_MAX_WORKERS)
+MEAL_DETAIL_PARALLELISM = max(1, int(os.getenv("MEAL_DETAIL_PARALLELISM", "4")))
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
@@ -496,6 +497,25 @@ def _set_plan_progress(
     status: str,
     failed_count: int = 0,
 ) -> None:
+    existing_doc = db.collection("users").document(user_id).collection("plans").document(plan_id).get()
+    existing_weeks = []
+    if existing_doc.exists:
+        existing_weeks = (existing_doc.to_dict() or {}).get("weeks") or []
+
+    # Preserve image generation fields that may be written concurrently.
+    for week_index, week in enumerate(weeks):
+        meals = week.get("meals") or []
+        existing_meals = []
+        if week_index < len(existing_weeks):
+            existing_meals = (existing_weeks[week_index] or {}).get("meals") or []
+        for meal_index, meal in enumerate(meals):
+            if meal_index >= len(existing_meals):
+                continue
+            existing_meal = existing_meals[meal_index] or {}
+            for key in ("image", "imageGenStatus", "imageGenAttempts", "imageGenError"):
+                if key in existing_meal and (key not in meal or meal.get(key) in (None, "")):
+                    meal[key] = existing_meal.get(key)
+
     completed_meals = [meal for meal in _flatten_weeks(weeks) if meal.get("status") == "completed"]
     grocery_list = aggregate_grocery_list(completed_meals)
     total_meals = len(_flatten_weeks(weeks))
@@ -908,6 +928,61 @@ def _normalize_tips(value: Any) -> list[str]:
     return []
 
 
+def _estimate_fallback_cost(monthly_budget: float) -> float:
+    baseline = monthly_budget / 28.0 if monthly_budget > 0 else 4.0
+    return round(max(2.5, min(baseline, 12.0)), 2)
+
+
+def _build_fallback_meal(
+    request: PlanGenerationRequest,
+    current_meal: dict[str, Any],
+    outline: MealOutline,
+) -> dict[str, Any]:
+    fallback_cost = _estimate_fallback_cost(request.monthlyBudget)
+    calories = 550
+    if request.goalType == "lose":
+        calories = 430
+    elif request.goalType == "gain":
+        calories = 700
+
+    return {
+        **current_meal,
+        "name": outline.name,
+        "day": current_meal.get("day") or outline.day,
+        "description": current_meal.get("description") or f"{outline.name} tailored to your preferences.",
+        "mealType": outline.mealType,
+        "calories": calories,
+        "carbs": 55.0,
+        "fat": 18.0,
+        "protein": 30.0,
+        "prepTime": "15 minutes",
+        "cookTime": "20 minutes",
+        "servings": 2,
+        "costPerServing": fallback_cost,
+        "difficulty": "Easy",
+        "instructions": "Prepare ingredients, cook until done, and season to taste.",
+        "tags": ["generated", "fallback"],
+        "ingredientItems": [],
+        "ingredients": [
+            "1 protein portion",
+            "1 vegetable portion",
+            "1 carbohydrate portion",
+            "Seasonings to taste",
+        ],
+        "tips": [
+            "Adjust spices to preference.",
+            "Pair with a simple side salad for extra volume.",
+        ],
+        "source": "generated-fallback",
+        "status": "completed",
+        "generationWarning": "Generated from fallback template after detail timeout/error.",
+    }
+
+
+def _generate_meal_detail_candidate(preferences: dict[str, Any], outline: MealOutline) -> Any:
+    return generate_meal_details(preferences, outline, retries=2)
+
+
 def _complete_plan_details_in_background(
     request: PlanGenerationRequest,
     preferences: dict[str, Any],
@@ -929,67 +1004,75 @@ def _complete_plan_details_in_background(
         ]
 
         for index, outline in enumerate(outlines):
-            week_index = index // 7
-            meal_index = index % 7
-            current_meal = dict(working_weeks[week_index]["meals"][meal_index])
             print(
                 f"[plan_service] request_id={request_id} stage=meal_started "
                 f"index={index + 1}/{total_meals} name={outline.name}"
             )
 
-            try:
-                detail_response = generate_meal_details(preferences, outline, retries=2)
-                ingredient_id_map = upsert_ingredient_prices(detail_response.ingredientPrices)
-                ingredient_name_map = build_normalized_name_map(detail_response.ingredientPrices, ingredient_id_map)
-                price_hint_map = build_price_hint_map(detail_response.ingredientPrices)
+        futures: dict[Any, tuple[int, MealOutline]] = {}
+        with ThreadPoolExecutor(max_workers=MEAL_DETAIL_PARALLELISM) as detail_executor:
+            for index, outline in enumerate(outlines):
+                future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
+                futures[future] = (index, outline)
 
-                processed_meals, _ = recalculate_meal_costs(
-                    [detail_response.meal],
-                    ingredient_id_map,
-                    ingredient_name_map,
-                    price_hint_map,
+            for future in as_completed(futures):
+                index, outline = futures[future]
+                week_index = index // 7
+                meal_index = index % 7
+                current_meal = dict(working_weeks[week_index]["meals"][meal_index])
+
+                try:
+                    detail_response = future.result()
+                    ingredient_id_map = upsert_ingredient_prices(detail_response.ingredientPrices)
+                    ingredient_name_map = build_normalized_name_map(detail_response.ingredientPrices, ingredient_id_map)
+                    price_hint_map = build_price_hint_map(detail_response.ingredientPrices)
+
+                    processed_meals, _ = recalculate_meal_costs(
+                        [detail_response.meal],
+                        ingredient_id_map,
+                        ingredient_name_map,
+                        price_hint_map,
+                    )
+                    deduped_meals, _recipe_stats = dedupe_or_create_recipes(processed_meals)
+                    completed_meal = dict(deduped_meals[0])
+
+                    merged_meal = {
+                        **current_meal,
+                        **completed_meal,
+                        "day": current_meal.get("day") or outline.day,
+                        "description": completed_meal.get("description") or current_meal.get("description", ""),
+                        "tips": _normalize_tips(completed_meal.get("tips")),
+                        "status": "completed",
+                    }
+
+                    for key in ("image", "imageGenStatus", "imageGenAttempts", "imageGenError"):
+                        if key in current_meal and key not in merged_meal:
+                            merged_meal[key] = current_meal[key]
+                        if key in current_meal and merged_meal.get(key) in (None, ""):
+                            merged_meal[key] = current_meal[key]
+
+                    working_weeks[week_index]["meals"][meal_index] = merged_meal
+                    print(
+                        f"[plan_service] request_id={request_id} stage=meal_completed "
+                        f"index={index + 1}/{total_meals} name={outline.name}"
+                    )
+                except Exception as exc:
+                    failed_count += 1
+                    fallback_meal = _build_fallback_meal(request, current_meal, outline)
+                    fallback_meal["generationError"] = str(exc)[:500]
+                    working_weeks[week_index]["meals"][meal_index] = fallback_meal
+                    print(
+                        f"[plan_service] request_id={request_id} stage=meal_fallback "
+                        f"index={index + 1}/{total_meals} name={outline.name} error={exc}"
+                    )
+
+                _set_plan_progress(
+                    request.userId,
+                    plan_id,
+                    weeks=working_weeks,
+                    status="generating",
+                    failed_count=failed_count,
                 )
-                deduped_meals, _recipe_stats = dedupe_or_create_recipes(processed_meals)
-                completed_meal = dict(deduped_meals[0])
-
-                merged_meal = {
-                    **current_meal,
-                    **completed_meal,
-                    "day": current_meal.get("day") or outline.day,
-                    "description": completed_meal.get("description") or current_meal.get("description", ""),
-                    "tips": _normalize_tips(completed_meal.get("tips")),
-                    "status": "completed",
-                }
-
-                # Preserve image generation fields when available.
-                for key in ("image", "imageGenStatus", "imageGenAttempts", "imageGenError"):
-                    if key in current_meal and key not in merged_meal:
-                        merged_meal[key] = current_meal[key]
-                    if key in current_meal and merged_meal.get(key) in (None, ""):
-                        merged_meal[key] = current_meal[key]
-
-                working_weeks[week_index]["meals"][meal_index] = merged_meal
-                print(
-                    f"[plan_service] request_id={request_id} stage=meal_completed "
-                    f"index={index + 1}/{total_meals} name={outline.name}"
-                )
-            except Exception as exc:
-                failed_count += 1
-                current_meal["status"] = "failed"
-                current_meal["generationError"] = str(exc)[:500]
-                working_weeks[week_index]["meals"][meal_index] = current_meal
-                print(
-                    f"[plan_service] request_id={request_id} stage=meal_failed "
-                    f"index={index + 1}/{total_meals} name={outline.name} error={exc}"
-                )
-
-            _set_plan_progress(
-                request.userId,
-                plan_id,
-                weeks=working_weeks,
-                status="generating",
-                failed_count=failed_count,
-            )
 
         completed_meals = [meal for meal in _flatten_weeks(working_weeks) if meal.get("status") == "completed"]
         all_completed = len(completed_meals) == len(outlines)
@@ -1006,7 +1089,7 @@ def _complete_plan_details_in_background(
                 plan_id,
                 weeks=working_weeks,
                 status="ready",
-                failed_count=0,
+                failed_count=failed_count,
             )
             _sync_day_docs(request.userId, plan_id, working_weeks)
             lock_final_status = "ready"
@@ -1018,6 +1101,7 @@ def _complete_plan_details_in_background(
                         "planMonth": target_month,
                         "mealCount": len(outlines),
                         "mealHistoryAdded": meal_history_added,
+                        "fallbackMealsUsed": failed_count,
                         "supersededPlansCount": superseded_count,
                         "todoFlow": TODO_FLOW,
                         "timing": {

@@ -101,3 +101,21 @@ def test_recalculate_meal_cost_unit_conversion_g_to_kg():
             # 500g converted to 0.5kg * $2.0/kg = $1.0
             cost = recalculate_meal_cost([{"ingredientId": "some_id", "quantity": 500, "unit": "g"}])
             assert cost == 1.0
+
+def test_recalculate_meal_cost_clamps_extreme_values():
+    mock_doc = MagicMock()
+    mock_doc.exists = True
+    # Price is intentionally extreme and should be clamped.
+    mock_doc.to_dict.return_value = {
+        "price": {"value": 9999.0, "unit": "cup"}
+    }
+
+    mock_db = MagicMock()
+    mock_db.collection().document().get.return_value = mock_doc
+
+    with patch("db.firestore_client.db", MagicMock()):
+        with patch("db.ingredient_service.db", mock_db):
+            from db.ingredient_service import recalculate_meal_cost
+            # Quantity is intentionally extreme and should be clamped to 8 cups.
+            cost = recalculate_meal_cost([{"ingredientId": "some_id", "quantity": 1000, "unit": "cup"}])
+            assert cost == 200.0

@@ -1,5 +1,6 @@
 from db.firestore_client import db
 from google.cloud import firestore as fs
+import math
 
 #mapping of potential spelling of the units to the way we want to store the units
 UNIT_NORMALIZATION = {
@@ -13,6 +14,20 @@ UNIT_NORMALIZATION = {
     "teaspoon": "tsp", "teaspoons": "tsp", "tsp": "tsp",
     "cup": "cup", "cups": "cup",
     "piece": "piece", "pieces": "piece",
+}
+
+MAX_PRICE_PER_UNIT_USD = 25.0
+MAX_QUANTITY_BY_UNIT = {
+    "g": 1000.0,
+    "kg": 2.0,
+    "ml": 2000.0,
+    "l": 2.0,
+    "oz": 64.0,
+    "lb": 5.0,
+    "tsp": 12.0,
+    "tbsp": 16.0,
+    "cup": 8.0,
+    "piece": 20.0,
 }
 
 #this is to normalize ingredient names, preventing duplicates
@@ -66,9 +81,18 @@ def recalculate_meal_cost(meal_ingredients: list[dict]) -> float:
 
     for item in meal_ingredients:
         ingredient_id = item.get("ingredientId")
-        quantity = item.get("quantity", 0)
+        try:
+            quantity = float(item.get("quantity", 0))
+        except (TypeError, ValueError):
+            quantity = 0.0
+        if not math.isfinite(quantity) or quantity < 0:
+            quantity = 0.0
+
         #this value comes from the meal's ingredient entry(array inside a meal document)... Ex -> recipe says "unit": "g" in the meal's ingredients array
         unit = normalize_unit(item.get("unit", ""))
+        max_quantity = MAX_QUANTITY_BY_UNIT.get(unit)
+        if max_quantity is not None:
+            quantity = min(quantity, max_quantity)
 
         #get ingredient by id
         doc = db.collection("ingredients").document(ingredient_id).get()
@@ -79,6 +103,14 @@ def recalculate_meal_cost(meal_ingredients: list[dict]) -> float:
         data = doc.to_dict()
         price_info = data.get("price", {})
         price_per_unit = price_info.get("value", 0.0)
+        try:
+            price_per_unit = float(price_per_unit)
+        except (TypeError, ValueError):
+            price_per_unit = 0.0
+        if not math.isfinite(price_per_unit) or price_per_unit < 0:
+            price_per_unit = 0.0
+        price_per_unit = min(price_per_unit, MAX_PRICE_PER_UNIT_USD)
+
         stored_unit = price_info.get("unit", unit)
 
         #unit conversion if needed

@@ -150,6 +150,19 @@ function hasPendingMealDetails(plan: MealPlan | null): boolean {
   return false;
 }
 
+function hasCompletedMeals(plan: MealPlan | null): boolean {
+  if (!plan) return false;
+  for (const week of plan.weeks) {
+    for (const meal of week.meals) {
+      const status = typeof meal.status === "string" ? meal.status.toLowerCase() : "";
+      if (status === "completed") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function MealPlanProvider({ children }: { children: React.ReactNode }) {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -230,7 +243,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
 
     const planKey = mealPlan.planId || `anon-${mealPlan.createdAt || "unknown"}`;
     if (imageTriggerByPlan.current.has(planKey)) return;
-    if ((mealPlan.status || "").toLowerCase() !== "ready") return;
+    if (!hasCompletedMeals(mealPlan)) return;
 
     const hasMissingImage = mealPlan.weeks.some((week) =>
       week.meals.some((meal) => {
@@ -310,7 +323,7 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
       imagePollStartedAtRef.current = null;
       return;
     }
-    if ((mealPlan.status || "").toLowerCase() !== "ready") {
+    if (!hasCompletedMeals(mealPlan)) {
       setImageSyncStatus("idle");
       if (imagePollIntervalRef.current) {
         clearInterval(imagePollIntervalRef.current);
