@@ -163,11 +163,8 @@ export default function Dashboard() {
     }
   };
 
-  const displayName = auth.currentUser?.displayName || currentUser?.displayName;
-  const emailName =
-    auth.currentUser?.email?.split("@")[0] ||
-    currentUser?.email?.split("@")[0] ||
-    "Chef";
+  const displayName = auth.currentUser?.displayName || "Chef";
+  const emailName = auth.currentUser?.email?.split("@")[0] || "Chef";
   const prefBudget =
     mealPlan &&
     mealPlan.preferences &&
