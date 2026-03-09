@@ -178,25 +178,25 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Clock className="w-6 h-6 text-primary mb-2" />
-                <div className="text-xl font-bold mb-1">{detailedRecipe.prepTime}</div>
+                <div className="text-xl mb-1">{detailedRecipe.prepTime}</div>
                 <div className="text-sm text-muted-foreground">Prep Time</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Users className="w-6 h-6 text-primary mb-2" />
-                <div className="text-xl font-bold mb-1">{detailedRecipe.servings}</div>
+                <div className="text-xl mb-1">{detailedRecipe.servings}</div>
                 <div className="text-sm text-muted-foreground">Servings</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <DollarSign className="w-6 h-6 text-primary mb-2" />
-                <div className="text-xl font-bold mb-1">{detailedRecipe.totalCost}</div>
+                <div className="text-xl mb-1">{detailedRecipe.totalCost}</div>
                 <div className="text-xs text-muted-foreground">{detailedRecipe.costPerServing}/serving</div>
               </CardContent></Card>
 
               <Card><CardContent className="pt-6 flex flex-col items-center text-center">
                 <Flame className="w-6 h-6 text-primary mb-2" />
-                <div className="text-xl font-bold mb-1">{detailedRecipe.calories}</div>
+                <div className="text-xl mb-1">{detailedRecipe.calories}</div>
                 <div className="text-sm text-muted-foreground">Calories</div>
               </CardContent></Card>
             </div>
@@ -243,12 +243,12 @@ export default function Recipe({ params }: { params: Promise<{ id: string }> }) 
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center pb-2 border-b">
-                  <span className="text-sm">Calories</span><span className="text-lg font-bold">{detailedRecipe.calories}</span>
+                  <span className="text-sm">Calories</span><span className="text-lg">{detailedRecipe.calories}</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm"><span>Protein</span><span className="font-medium">{detailedRecipe.protein}</span></div>
-                  <div className="flex justify-between text-sm"><span>Carbs</span><span className="font-medium">{detailedRecipe.carbs}</span></div>
-                  <div className="flex justify-between text-sm"><span>Fat</span><span className="font-medium">{detailedRecipe.fat}</span></div>
+                  <div className="flex justify-between text-sm"><span>Protein</span><span>{detailedRecipe.protein}</span></div>
+                  <div className="flex justify-between text-sm"><span>Carbs</span><span>{detailedRecipe.carbs}</span></div>
+                  <div className="flex justify-between text-sm"><span>Fat</span><span>{detailedRecipe.fat}</span></div>
                 </div>
               </CardContent>
             </Card>
