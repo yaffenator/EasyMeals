@@ -131,6 +131,10 @@ User preferences:
 
 Rules:
 - Produce exactly 28 meals total.
+- Ensure the price for the meal is accurate based on sum of current prices of each ingredient in Northwest Oregon
+- Make sure the meal total is the sum of all of the ingredient costs.
+- Ensure the meal plan stays within 60-70% of the users monthly budget to allow for breakfast, lunch, and snacks.
+- Ensure the prep time accurately reflects the time it would take to prepare the meal based on the included ingredients and instructions.
 - Every meal MUST be a dinner meal.
 - Set `mealType` to exactly "Dinner" for every meal.
 - Strictly exclude allergens listed above.
@@ -170,7 +174,7 @@ Return JSON with this exact top-level shape:
           "notes": ""
         }}
       ],
-      "ingredients": ["Rolled Oats"]
+      "ingredients": ["1 Cup Rolled Oats"]
     }}
   ],
   "ingredientPrices": {{
@@ -244,6 +248,10 @@ Target meal to expand:
 
 Rules:
 - Return exactly one meal object matching the target meal name and meal type.
+- Ensure the price for the meal is accurate based on sum of current prices of each ingredient in Northwest Oregon
+- Make sure the meal total is the sum of all of the ingredient costs.
+- Ensure the meal plan stays within 60-70% of the users monthly budget
+- Ensure the prep time accurately reflects the time it would take to prepare the meal based on the included ingredients and instructions.
 - The meal MUST be a dinner meal.
 - Set `meal.mealType` to exactly "Dinner".
 - Strictly exclude allergens listed above.
@@ -282,7 +290,7 @@ Return JSON with this exact top-level shape:
         "notes": ""
       }}
     ],
-    "ingredients": ["Rolled Oats"]
+    "ingredients": ["1 Cup Rolled Oats"]
   }},
   "ingredientPrices": {{
     "ingredient_oats_grains": {{
