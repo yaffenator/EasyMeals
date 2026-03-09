@@ -8,14 +8,115 @@ from pydantic import BaseModel, Field
 
 GEMINI_MODEL = "gemini-3-flash-preview"
 DEFAULT_RETRIES = 3
-GEMINI_CALL_TIMEOUT_SECONDS = max(10, int(os.getenv("GEMINI_CALL_TIMEOUT_SECONDS", "90")))
+GEMINI_CALL_TIMEOUT_SECONDS = max(90, int(os.getenv("GEMINI_CALL_TIMEOUT_SECONDS", "150")))
+
+# ---------------------------------------------------------------------------
+# Keyword → ingredient ID map.
+# Keys match the meal name/description; values are exact IDs from accurate_ingredients.json.
+# Used to pass a focused ~25-entry subset to each prompt instead of the full file,
+# which prevents Gemini from hallucinating or renaming ingredient IDs.
+# ---------------------------------------------------------------------------
+KEYWORD_MAP: dict[str, list[str]] = {
+    "beef":         ["beef_ground_90_10", "beef_sirloin_steak", "beef_chuck_roast"],
+    "steak":        ["beef_sirloin_steak"],
+    "ground beef":  ["beef_ground_90_10"],
+    "meatball":     ["beef_ground_90_10", "pork_ground"],
+    "pork":         ["pork_chops_boneless", "pork_tenderloin", "pork_ground"],
+    "bacon":        ["bacon_sliced"],
+    "sausage":      ["sausage_italian"],
+    "chicken":      ["chicken_breast_boneless", "chicken_thighs_boneless", "chicken_thighs_bonein"],
+    "turkey":       ["turkey_ground"],
+    "salmon":       ["salmon_fillet"],
+    "tilapia":      ["tilapia_fillet"],
+    "shrimp":       ["shrimp_frozen_peeled"],
+    "tuna":         ["tuna_canned"],
+    "cod":          ["cod_fillet"],
+    "fish":         ["salmon_fillet", "tilapia_fillet", "cod_fillet"],
+    "seafood":      ["shrimp_frozen_peeled", "salmon_fillet"],
+    "broccoli":     ["broccoli_florets"],
+    "carrot":       ["carrots_whole"],
+    "spinach":      ["spinach_fresh"],
+    "kale":         ["kale"],
+    "bell pepper":  ["bell_pepper_red", "bell_pepper_green"],
+    "pepper":       ["bell_pepper_red", "bell_pepper_green"],
+    "onion":        ["onion_yellow", "onion_red"],
+    "potato":       ["potato_russet", "potato_sweet"],
+    "sweet potato": ["potato_sweet"],
+    "zucchini":     ["zucchini"],
+    "tomato":       ["tomato_roma", "diced_tomatoes_canned"],
+    "asparagus":    ["asparagus"],
+    "cauliflower":  ["cauliflower"],
+    "cabbage":      ["cabbage_green"],
+    "rice":         ["rice_white_jasmine", "rice_brown"],
+    "quinoa":       ["quinoa"],
+    "pasta":        ["pasta_spaghetti", "pasta_penne"],
+    "spaghetti":    ["pasta_spaghetti"],
+    "penne":        ["pasta_penne"],
+    "noodle":       ["pasta_spaghetti", "pasta_penne"],
+    "oat":          ["oats_rolled"],
+    "bread":        ["bread_whole_wheat"],
+    "tortilla":     ["tortillas_corn", "tortillas_flour"],
+    "taco":         ["tortillas_corn", "tortillas_flour"],
+    "burrito":      ["tortillas_flour"],
+    "wrap":         ["tortillas_flour"],
+    "egg":          ["eggs_large"],
+    "milk":         ["milk_whole"],
+    "butter":       ["butter_unsalted"],
+    "cheese":       ["cheese_cheddar_shredded", "cheese_parmesan"],
+    "cheddar":      ["cheese_cheddar_shredded"],
+    "parmesan":     ["cheese_parmesan"],
+    "yogurt":       ["yogurt_greek_plain"],
+    "olive oil":    ["olive_oil_evoo"],
+    "oil":          ["olive_oil_evoo", "vegetable_oil"],
+    "soy sauce":    ["soy_sauce"],
+    "stir fry":     ["soy_sauce", "vegetable_oil", "rice_white_jasmine"],
+    "fried rice":   ["soy_sauce", "vegetable_oil", "rice_white_jasmine", "eggs_large"],
+    "curry":        ["chicken_broth", "diced_tomatoes_canned", "rice_white_jasmine"],
+    "soup":         ["chicken_broth", "carrots_whole", "onion_yellow"],
+    "bean":         ["black_beans_canned", "chickpeas_canned"],
+    "black bean":   ["black_beans_canned"],
+    "chickpea":     ["chickpeas_canned"],
+    "tomato paste": ["tomato_paste"],
+    "peanut":       ["peanut_butter"],
+    "honey":        ["honey"],
+    "glaze":        ["honey", "soy_sauce"],
+}
+
+_ALWAYS_INCLUDE: list[str] = [
+    "olive_oil_evoo", "vegetable_oil", "garlic_clove", "onion_yellow",
+    "chicken_broth", "tomato_paste", "soy_sauce", "eggs_large", "butter_unsalted",
+]
+
+_FALLBACK_PADDING: list[str] = [
+    "bell_pepper_red", "carrots_whole", "broccoli_florets", "potato_russet",
+    "rice_white_jasmine", "pasta_penne", "cheese_cheddar_shredded", "milk_whole",
+    "black_beans_canned", "diced_tomatoes_canned",
+]
+
+
+def _select_relevant_ingredients(meal_name: str, meal_description: str, all_ingredients: dict) -> dict:
+    """Return a focused ~25-35 entry subset of all_ingredients relevant to this meal."""
+    search_text = f"{meal_name} {meal_description}".lower()
+    relevant_keys: set[str] = set(_ALWAYS_INCLUDE)
+
+    for keyword, ids in KEYWORD_MAP.items():
+        if keyword in search_text:
+            relevant_keys.update(ids)
+
+    for key in _FALLBACK_PADDING:
+        if len(relevant_keys) >= 32:
+            break
+        relevant_keys.add(key)
+
+    return {k: all_ingredients[k] for k in relevant_keys if k in all_ingredients}
+
 
 class IngredientItem(BaseModel):
     ingredientId: str
     originalText: str
     quantity: float
     unit: str
-    notes: str = ""
+    notes: Optional[str] = ""
 
 
 class Meal(BaseModel):
@@ -118,7 +219,7 @@ def _normalize_instruction_text(value: str) -> str:
 
     return text
 
-
+'''
 def build_prompt(preferences: dict[str, Any]) -> str:
     return f"""
 You are a professional nutritionist and chef. Generate a 4-week meal plan.
@@ -194,7 +295,8 @@ Return JSON with this exact top-level shape:
   }}
 }}
 """
-
+'''
+#The above prompt is the original combined prompt. The following prompts are the new split prompts for a two-pass approach.
 
 def build_name_plan_prompt(preferences: dict[str, Any]) -> str:
     return f"""
@@ -210,11 +312,10 @@ Rules:
 - Produce exactly 28 meals total (7 meals per week x 4 weeks).
 - Use days in sequence: Monday to Sunday, then repeat for each week.
 - For each meal include only: name, mealType, day, description.
-- Every meal MUST be a dinner meal.
 - Set `mealType` to exactly "Dinner" for every meal.
 - Keep description to one short sentence.
 - Strictly exclude allergens listed above.
-- Keep meals diverse across the month.
+- Make sure each meal in unique so that the meal plan is diverse across the month.
 - Return only raw JSON with no markdown.
 
 Return JSON with this exact top-level shape:
@@ -231,85 +332,145 @@ Return JSON with this exact top-level shape:
 """
 
 
-def build_meal_detail_prompt(preferences: dict[str, Any], meal_outline: MealOutline) -> str:
+def build_meal_detail_prompt(preferences: dict[str, Any], meal_outline: MealOutline, ingredients_data: dict) -> str:
+    ingredients_json_str = json.dumps(ingredients_data, indent=2)
     return f"""
-You are a professional nutritionist and chef. Generate complete details for ONE meal.
+You are a professional nutritionist and chef generating structured meal data as JSON.
 
-User preferences:
-- Monthly budget: ${preferences.get("monthlyBudget")}
+## User Preferences
+- Monthly budget: ${preferences.get("monthlyBudget")} USD/month
 - Goal: {preferences.get("goalType")}
-- Dietary tags: {preferences.get("dietaryTags", [])}
-- Allergies (strictly exclude): {preferences.get("allergies", [])}
+- Allergies — STRICTLY FORBIDDEN, never include: {preferences.get("allergies", [])}
 
-Target meal to expand:
+## Target Meal
 - Name: {meal_outline.name}
-- Meal type: {meal_outline.mealType}
+- Type: {meal_outline.mealType}
 - Day: {meal_outline.day}
+- Description: {getattr(meal_outline, "description", "")}
 
-Rules:
-- Return exactly one meal object matching the target meal name and meal type.
-- Ensure the price for the meal is accurate based on sum of current prices of each ingredient in Northwest Oregon
-- Make sure the meal total is the sum of all of the ingredient costs.
-- Ensure the meal plan stays within 60-70% of the users monthly budget
-- Ensure the prep time accurately reflects the time it would take to prepare the meal based on the included ingredients and instructions.
-- The meal MUST be a dinner meal.
-- Set `meal.mealType` to exactly "Dinner".
-- Strictly exclude allergens listed above.
-- Include practical ingredient measurements.
-- Every `ingredientItems[*].ingredientId` MUST exactly match an existing key in `ingredientPrices`.
-- Do not invent, rename, singularize, or pluralize ingredient IDs between sections.
-- Keep instructions clear and concise.
-- `meal.instructions` must be one plain string of sentence steps separated by period+space.
-- Do not include numbering (e.g. `1.`), bullets, markdown, or newline separators in `meal.instructions`.
-- Return only raw JSON with no markdown.
+## Ingredient Price Reference
+The JSON below lists EVERY ingredient you may use. Each entry has a price per unit.
+RULES — read carefully:
+1. Every ingredientId you use MUST be an exact key from this object. Copy it character-for-character.
+2. Do NOT invent, rename, pluralize, or abbreviate ingredient IDs.
+3. Use the EXACT unit listed for each ingredient in your ingredientItems (e.g. if the unit is "tbsp", your quantity must be in tbsp).
+4. If you want an ingredient not listed here, omit it or substitute the closest listed one.
 
-Return JSON with this exact top-level shape:
+{ingredients_json_str}
+
+## Cost Calculation — do this math yourself before writing costPerServing
+  For each ingredient: item_cost = price * quantity  (units already match — no conversion needed)
+  total_cost = sum of all item_costs
+  costPerServing = round(total_cost / servings, 2)
+
+## Other Rules
+- mealType MUST be exactly "Dinner"
+- prepTime and cookTime must be realistic (e.g. "15 minutes", "25 minutes")
+- instructions: one plain string, steps separated by ". " — NO numbering, NO bullets, NO newlines
+- Strictly exclude all allergens listed above
+- Return ONLY raw JSON — no markdown fences, no explanation
+
+## Required JSON Shape
 {{
   "meal": {{
     "name": "{meal_outline.name}",
-    "calories": 500,
-    "carbs": 60,
-    "fat": 15,
-    "protein": 30,
-    "prepTime": "10 minutes",
-    "cookTime": "20 minutes",
-    "servings": 2,
-    "costPerServing": 2.5,
-    "mealType": "{meal_outline.mealType}",
-    "difficulty": "Easy",
-    "instructions": "Heat oil in a pan. Add ingredients and cook through. Season and serve warm.",
-    "tags": ["budget-friendly"],
-    "tips": "Optional helpful tip",
+    "calories": 550,
+    "carbs": 45,
+    "fat": 18,
+    "protein": 38,
+    "prepTime": "15 minutes",
+    "cookTime": "25 minutes",
+    "servings": 4,
+    "costPerServing": 3.75,
+    "mealType": "Dinner",
+    "difficulty": "Medium",
+    "instructions": "Heat oil over medium heat. Add garlic and cook 1 minute. Add protein and cook through. Season and serve.",
+    "tags": ["high-protein", "budget-friendly"],
+    "tips": "Optional tip here",
     "source": "generated",
     "ingredientItems": [
       {{
-        "ingredientId": "ingredient_oats_grains",
-        "originalText": "1 cup rolled oats",
-        "quantity": 1,
-        "unit": "cup",
-        "notes": ""
+        "ingredientId": "chicken_breast_boneless",
+        "originalText": "1.5 lbs boneless chicken breast",
+        "quantity": 1.5,
+        "unit": "lb",
+        "notes": "cubed"
       }}
     ],
-    "ingredients": ["1 Cup Rolled Oats"]
+    "ingredients": ["1.5 lbs boneless chicken breast, cubed"]
   }},
   "ingredientPrices": {{
-    "ingredient_oats_grains": {{
-      "name": "rolled oats",
-      "category": "grains",
-      "defaultUnit": "cup",
+    "chicken_breast_boneless": {{
+      "name": "boneless chicken breast",
+      "category": "protein",
+      "defaultUnit": "lb",
       "snapEligible": true,
-      "aliases": ["oats"],
+      "aliases": ["chicken breast"],
       "price": {{
-        "value": 0.3,
+        "value": 3.49,
         "currency": "USD",
         "unitQuantity": 1,
-        "unit": "cup"
+        "unit": "lb"
       }}
     }}
   }}
 }}
 """
 
+def load_ingredient_list() -> dict[str, Any]:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base_dir, "..", "accurate_ingredients.json")
+    with open(path, "r") as f:
+        return json.load(f)
+    
+def _flatten_ingredients(nested: dict) -> dict:
+    """Converts category-nested ingredient JSON into a flat id->data dict."""
+    flat = {}
+    for category, items in nested.items():
+        for key, data in items.items():
+            flat[key] = data
+    return flat
+
+
+def _resolve_ingredient_id(ingredient_id: str, all_ingredients: dict) -> Optional[str]:
+    """
+    Match a Gemini-returned ID to a real key, handling common variants.
+    Gemini often drops suffixes: chicken_breast instead of chicken_breast_boneless,
+    or adds/drops _fresh, _canned, _sliced, etc.
+    """
+    if ingredient_id in all_ingredients:
+        return ingredient_id
+
+    STRIP_SUFFIXES = [
+        "_boneless", "_fillet", "_fresh", "_whole", "_sliced",
+        "_frozen_peeled", "_peeled", "_ground", "_canned",
+        "_shredded", "_unsalted", "_evoo", "_plain",
+    ]
+    normalized = ingredient_id
+    for suffix in STRIP_SUFFIXES:
+        if normalized.endswith(suffix):
+            normalized = normalized[: -len(suffix)]
+            break
+
+    # Prefix match: our key starts with what Gemini gave (e.g. chicken_breast -> chicken_breast_boneless)
+    for key in all_ingredients:
+        if key.startswith(normalized + "_") or key == normalized:
+            return key
+
+    # Reverse prefix: Gemini gave a longer ID, our key is the root
+    for key in all_ingredients:
+        if ingredient_id.startswith(key + "_") or ingredient_id == key:
+            return key
+
+    # Last resort: first two underscore segments match (e.g. beef_ground_* -> beef_ground_90_10)
+    parts = ingredient_id.split("_")
+    if len(parts) >= 2:
+        prefix = "_".join(parts[:2])
+        for key in all_ingredients:
+            if key.startswith(prefix):
+                return key
+
+    return None
 
 def _extract_json_text(raw_text: str) -> str:
     text = raw_text.strip()
@@ -390,19 +551,28 @@ def _call_and_parse(prompt: str, parser: type[TModel], retries: int = DEFAULT_RE
 
     raise ValueError(f"Gemini failed after {retries} attempts: {last_error}")
 
-
+'''
 def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     response = _call_and_parse(prompt, GeminiResponse, retries=retries)
     for meal in response.mealPlan:
-        meal.mealType = "Dinner"
-        meal.instructions = _normalize_instruction_text(meal.instructions)
+        actual_total_cost = 0
+        for item in meal.ingredientItems:
+            # Look up the REAL price from your JSON file
+            master_data = INGREDIENT_MASTER.get(item.ingredientId)
+            if master_data:
+                # Calculate the math in Python (Accurate!)
+                item_cost = master_data['price'] * item.quantity
+                actual_total_cost += item_cost
+        
+        # Overwrite the AI's potentially wrong math
+        meal.costPerServing = round(actual_total_cost / meal.servings, 2)
+        
     return response
-
 
 def generate_meal_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     prompt = build_prompt(preferences)
     return call_gemini(prompt, retries=retries)
-
+'''
 
 def generate_meal_name_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> MealNamePlanResponse:
     prompt = build_name_plan_prompt(preferences)
@@ -420,8 +590,44 @@ def generate_meal_details(
     retries: int = DEFAULT_RETRIES,
 ) -> MealDetailResponse:
     meal_outline.mealType = "Dinner"
-    prompt = build_meal_detail_prompt(preferences, meal_outline)
+    raw_ingredients = load_ingredient_list()
+    all_ingredients = _flatten_ingredients(raw_ingredients)
+
+    # Pass only the relevant subset — keeps prompt small so Gemini uses correct IDs
+    relevant_ingredients = _select_relevant_ingredients(
+        meal_outline.name,
+        getattr(meal_outline, "description", ""),
+        all_ingredients,
+    )
+
+    prompt = build_meal_detail_prompt(preferences, meal_outline, relevant_ingredients)
     response = _call_and_parse(prompt, MealDetailResponse, retries=retries)
     response.meal.mealType = "Dinner"
     response.meal.instructions = _normalize_instruction_text(response.meal.instructions)
+
+    # Recalculate costPerServing in Python — overrides any hallucinated math from Gemini.
+    # Uses fuzzy ID resolution to handle Gemini dropping/adding suffixes like _boneless, _fresh.
+    actual_total_cost = 0.0
+    unmatched: list[str] = []
+
+    for item in response.meal.ingredientItems:
+        resolved_id = _resolve_ingredient_id(item.ingredientId, all_ingredients)
+        if resolved_id:
+            if resolved_id != item.ingredientId:
+                print(f"[INFO] Resolved '{item.ingredientId}' -> '{resolved_id}' for '{meal_outline.name}'")
+            master = all_ingredients[resolved_id]
+            actual_total_cost += master["price"] * item.quantity
+        else:
+            # Last resort: use Gemini's returned price
+            ai_price = response.ingredientPrices.get(item.ingredientId)
+            if ai_price:
+                actual_total_cost += ai_price.price.value * item.quantity
+            unmatched.append(item.ingredientId)
+
+    if unmatched:
+        print(f"[WARN] Truly unmatched IDs for '{meal_outline.name}' (add to JSON or KEYWORD_MAP): {unmatched}")
+
+    if response.meal.servings > 0 and actual_total_cost > 0:
+        response.meal.costPerServing = round(actual_total_cost / response.meal.servings, 2)
+
     return response

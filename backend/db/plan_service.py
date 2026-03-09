@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -87,7 +88,11 @@ TODO_FLOW = [
 
 PLAN_GENERATION_MAX_WORKERS = max(1, int(os.getenv("PLAN_GENERATION_MAX_WORKERS", "2")))
 PLAN_GENERATION_EXECUTOR = ThreadPoolExecutor(max_workers=PLAN_GENERATION_MAX_WORKERS)
-MEAL_DETAIL_PARALLELISM = max(1, int(os.getenv("MEAL_DETAIL_PARALLELISM", "4")))
+# Keep parallelism low: each Gemini call can take 30-90s and the API has rate limits.
+# Too many concurrent calls causes queuing that pushes individual calls past the timeout.
+# 3 concurrent calls with a 2s stagger between submissions is a safe default.
+MEAL_DETAIL_PARALLELISM = max(1, int(os.getenv("MEAL_DETAIL_PARALLELISM", "3")))
+MEAL_DETAIL_SUBMIT_STAGGER_SECONDS = float(os.getenv("MEAL_DETAIL_SUBMIT_STAGGER_SECONDS", "2.0"))
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
@@ -1014,6 +1019,10 @@ def _complete_plan_details_in_background(
             for index, outline in enumerate(outlines):
                 future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
                 futures[future] = (index, outline)
+                # Stagger submissions so we don't slam the Gemini API with all 28 calls at once.
+                # With parallelism=3 and 2s stagger, calls spread across ~18s instead of all at once.
+                if index > 0 and index % MEAL_DETAIL_PARALLELISM == 0:
+                    time.sleep(MEAL_DETAIL_SUBMIT_STAGGER_SECONDS)
 
             for future in as_completed(futures):
                 index, outline = futures[future]
@@ -1051,7 +1060,10 @@ def _complete_plan_details_in_background(
                         if key in current_meal and merged_meal.get(key) in (None, ""):
                             merged_meal[key] = current_meal[key]
 
-                    working_weeks[week_index]["meals"][meal_index] = merged_meal
+                    # Strip Firestore DocumentReference before writing to the weeks array.
+                    # Embedded references in array fields cause "even number of path elements" errors.
+                    merged_meal_for_storage = {k: v for k, v in merged_meal.items() if k != "recipeRef"}
+                    working_weeks[week_index]["meals"][meal_index] = merged_meal_for_storage
                     print(
                         f"[plan_service] request_id={request_id} stage=meal_completed "
                         f"index={index + 1}/{total_meals} name={outline.name}"
@@ -1060,6 +1072,7 @@ def _complete_plan_details_in_background(
                     failed_count += 1
                     fallback_meal = _build_fallback_meal(request, current_meal, outline)
                     fallback_meal["generationError"] = str(exc)[:500]
+                    fallback_meal.pop("recipeRef", None)
                     working_weeks[week_index]["meals"][meal_index] = fallback_meal
                     print(
                         f"[plan_service] request_id={request_id} stage=meal_fallback "
