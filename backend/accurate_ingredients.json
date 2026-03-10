@@ -185,6 +185,56 @@
       "name": "green cabbage",
       "price": 0.79,
       "unit": "lb"
+    },
+    "mushrooms_cremini": {
+      "name": "cremini mushrooms",
+      "price": 3.49,
+      "unit": "lb"
+    },
+    "mushrooms_white": {
+      "name": "white mushrooms",
+      "price": 2.99,
+      "unit": "lb"
+    },
+    "peas_frozen": {
+      "name": "frozen peas",
+      "price": 0.25,
+      "unit": "cup"
+    },
+    "corn_frozen": {
+      "name": "frozen corn",
+      "price": 0.2,
+      "unit": "cup"
+    },
+    "green_beans_fresh": {
+      "name": "green beans",
+      "price": 1.99,
+      "unit": "lb"
+    },
+    "celery": {
+      "name": "celery",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "eggplant": {
+      "name": "eggplant",
+      "price": 1.29,
+      "unit": "each"
+    },
+    "jalapeno": {
+      "name": "jalapeno pepper",
+      "price": 0.3,
+      "unit": "each"
+    },
+    "lime": {
+      "name": "lime",
+      "price": 0.5,
+      "unit": "each"
+    },
+    "lemon": {
+      "name": "lemon",
+      "price": 0.6,
+      "unit": "each"
     }
   },
   "GRAINS_STARCHES": {
@@ -232,6 +282,46 @@
       "name": "flour tortillas",
       "price": 0.27,
       "unit": "each"
+    },
+    "pasta_linguine": {
+      "name": "linguine pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "pasta_fettuccine": {
+      "name": "fettuccine pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "pasta_rotini": {
+      "name": "rotini pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "rice_arborio": {
+      "name": "arborio rice",
+      "price": 0.95,
+      "unit": "cup"
+    },
+    "lentils_green": {
+      "name": "green lentils",
+      "price": 0.55,
+      "unit": "cup"
+    },
+    "lentils_red": {
+      "name": "red lentils",
+      "price": 0.5,
+      "unit": "cup"
+    },
+    "breadcrumbs": {
+      "name": "breadcrumbs",
+      "price": 0.2,
+      "unit": "cup"
+    },
+    "pizza_dough": {
+      "name": "pizza dough",
+      "price": 2.99,
+      "unit": "each"
     }
   },
   "DAIRY_EGGS": {
@@ -263,6 +353,36 @@
     "yogurt_greek_plain": {
       "name": "plain greek yogurt",
       "price": 0.68,
+      "unit": "cup"
+    },
+    "cheese_mozzarella": {
+      "name": "mozzarella cheese",
+      "price": 0.95,
+      "unit": "cup"
+    },
+    "cheese_ricotta": {
+      "name": "ricotta cheese",
+      "price": 0.75,
+      "unit": "cup"
+    },
+    "cheese_feta": {
+      "name": "feta cheese",
+      "price": 1.25,
+      "unit": "cup"
+    },
+    "cream_heavy": {
+      "name": "heavy cream",
+      "price": 0.5,
+      "unit": "cup"
+    },
+    "cream_cheese": {
+      "name": "cream cheese",
+      "price": 0.6,
+      "unit": "oz"
+    },
+    "sour_cream": {
+      "name": "sour cream",
+      "price": 0.4,
       "unit": "cup"
     }
   },
@@ -316,6 +436,136 @@
       "name": "honey",
       "price": 0.3,
       "unit": "tbsp"
+    },
+    "kidney_beans_canned": {
+      "name": "canned kidney beans",
+      "price": 0.99,
+      "unit": "can"
+    },
+    "tomato_sauce_canned": {
+      "name": "canned tomato sauce",
+      "price": 1.09,
+      "unit": "can"
+    },
+    "crushed_tomatoes": {
+      "name": "crushed tomatoes",
+      "price": 1.39,
+      "unit": "can"
+    },
+    "vegetable_broth": {
+      "name": "vegetable broth",
+      "price": 0.31,
+      "unit": "cup"
+    },
+    "beef_broth": {
+      "name": "beef broth",
+      "price": 0.31,
+      "unit": "cup"
+    },
+    "flour_all_purpose": {
+      "name": "all-purpose flour",
+      "price": 0.12,
+      "unit": "cup"
+    },
+    "sugar_granulated": {
+      "name": "granulated sugar",
+      "price": 0.08,
+      "unit": "cup"
+    },
+    "italian_seasoning": {
+      "name": "italian seasoning",
+      "price": 0.1,
+      "unit": "tsp"
+    },
+    "cumin_ground": {
+      "name": "ground cumin",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "chili_powder": {
+      "name": "chili powder",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "paprika": {
+      "name": "paprika",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "oregano_dried": {
+      "name": "dried oregano",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "red_pepper_flakes": {
+      "name": "red pepper flakes",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "worcestershire": {
+      "name": "worcestershire sauce",
+      "price": 0.15,
+      "unit": "tbsp"
+    },
+    "hot_sauce": {
+      "name": "hot sauce",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "salsa_jarred": {
+      "name": "jarred salsa",
+      "price": 0.25,
+      "unit": "cup"
+    },
+    "bbq_sauce": {
+      "name": "BBQ sauce",
+      "price": 0.2,
+      "unit": "tbsp"
+    },
+    "white_wine": {
+      "name": "white wine",
+      "price": 0.75,
+      "unit": "cup"
+    },
+    "apple_cider_vinegar": {
+      "name": "apple cider vinegar",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "corn_starch": {
+      "name": "cornstarch",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "refried_beans_canned": {
+      "name": "canned refried beans",
+      "price": 1.29,
+      "unit": "can"
+    },
+    "pesto_jarred": {
+      "name": "jarred pesto",
+      "price": 0.45,
+      "unit": "tbsp"
+    },
+    "coconut_milk_canned": {
+      "name": "canned coconut milk",
+      "price": 1.89,
+      "unit": "can"
+    },
+    "curry_powder": {
+      "name": "curry powder",
+      "price": 0.1,
+      "unit": "tsp"
+    },
+    "garam_masala": {
+      "name": "garam masala",
+      "price": 0.12,
+      "unit": "tsp"
+    },
+    "bay_leaves": {
+      "name": "bay leaves",
+      "price": 0.05,
+      "unit": "each"
     }
   }
 }
