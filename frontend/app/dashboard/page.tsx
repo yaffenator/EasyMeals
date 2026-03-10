@@ -119,27 +119,29 @@ export default function Dashboard() {
   const [isRefreshingPlan, setIsRefreshingPlan] = useState(false);
 
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const typedCurrentUser = currentUser as
     | { displayName?: string | null; email?: string | null }
     | null
     | undefined;
 
-  // Auth check
+  // Auth check & redirect to login
   useEffect(() => {
-    if (!currentUser && !auth.currentUser) {
+    // Only redirect if Firebase is DONE loading AND there is no user
+    if (!loading && !currentUser) {
       router.push("/login");
     }
-  }, [currentUser, router]);
+  }, [currentUser, loading, router]);
 
   // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
-      const uid = auth.currentUser?.uid;
+      const uid = auth.currentUser?.uid || auth.currentUser?.uid;
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
           const userSnap = await getDoc(userRef);
+
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setQuestionnaireCompleted(
@@ -153,6 +155,19 @@ export default function Dashboard() {
     };
     checkQuestionnaireStatus();
   }, [currentUser, mealPlan]);
+
+  // Show a loading screen (or return null) while Firebase checks
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return null;
+  }
 
   // 2. The hydration logic (useEffect) has been REMOVED.
   // It now lives in MealPlanContext.tsx to allow background processing.
@@ -177,7 +192,8 @@ export default function Dashboard() {
     }
   };
 
-  const displayName = auth.currentUser?.displayName || typedCurrentUser?.displayName;
+  const displayName =
+    auth.currentUser?.displayName || typedCurrentUser?.displayName;
   const emailName =
     auth.currentUser?.email?.split("@")[0] ||
     typedCurrentUser?.email?.split("@")[0] ||
@@ -381,7 +397,9 @@ export default function Dashboard() {
                     </Badge>
                   )}
                   {detailBadge && (
-                    <Badge className={`absolute bottom-3 left-3 ${detailBadge.className}`}>
+                    <Badge
+                      className={`absolute bottom-3 left-3 ${detailBadge.className}`}
+                    >
                       {detailBadge.label}
                     </Badge>
                   )}
@@ -389,7 +407,8 @@ export default function Dashboard() {
                 <CardHeader className="pb-0 pt-4">
                   <CardTitle className="text-xl">{meal.name}</CardTitle>
                   <CardDescription className="line-clamp-2">
-                    {meal.description || "Meal details are still being generated."}
+                    {meal.description ||
+                      "Meal details are still being generated."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
