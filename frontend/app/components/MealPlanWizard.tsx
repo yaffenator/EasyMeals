@@ -283,6 +283,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                 <Input
                   id="budget"
                   type="number"
+                  pattern="[0-9]*"
                   step="0.01"
                   min="50"
                   max="1000"
@@ -337,6 +338,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
                   max="380"
                   placeholder="165"
                   value={weight}
+                  pattern="[0-9]*\.?[0-9]*"
                   onChange={(e) => setWeight(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -376,6 +378,7 @@ export function MealPlanWizard({ onComplete, onCancel }: MealPlanWizardProps) {
             <div className="space-y-4">
               <h3 className="text-xl font-medium">Cuisines to avoid?</h3>
               <Input
+                pattern="[A-Za-z\s]+"
                 placeholder="e.g. Spicy, Fast Food, Shellfish"
                 value={excludedCuisines}
                 onChange={(e) => setExcludedCuisines(e.target.value)}

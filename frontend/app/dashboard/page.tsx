@@ -177,7 +177,8 @@ export default function Dashboard() {
     }
   };
 
-  const displayName = auth.currentUser?.displayName || typedCurrentUser?.displayName;
+  const displayName =
+    auth.currentUser?.displayName || typedCurrentUser?.displayName;
   const emailName =
     auth.currentUser?.email?.split("@")[0] ||
     typedCurrentUser?.email?.split("@")[0] ||
@@ -381,7 +382,9 @@ export default function Dashboard() {
                     </Badge>
                   )}
                   {detailBadge && (
-                    <Badge className={`absolute bottom-3 left-3 ${detailBadge.className}`}>
+                    <Badge
+                      className={`absolute bottom-3 left-3 ${detailBadge.className}`}
+                    >
                       {detailBadge.label}
                     </Badge>
                   )}
@@ -389,7 +392,8 @@ export default function Dashboard() {
                 <CardHeader className="pb-0 pt-4">
                   <CardTitle className="text-xl">{meal.name}</CardTitle>
                   <CardDescription className="line-clamp-2">
-                    {meal.description || "Meal details are still being generated."}
+                    {meal.description ||
+                      "Meal details are still being generated."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-4">
@@ -436,9 +440,6 @@ export default function Dashboard() {
             disabled={isRefreshingPlan}
           >
             {isRefreshingPlan ? "Refreshing..." : "Refresh Plan"}
-          </Button>
-          <Button size="lg" variant="outline">
-            Download Shopping List
           </Button>
         </div>
       </main>

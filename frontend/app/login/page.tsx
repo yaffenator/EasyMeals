@@ -192,7 +192,7 @@ export default function AuthPage() {
                             Password<span className="text-red-800">*</span>
                           </Label>
                         </div>
-                        <div className="relative">
+                        <div className="relative top-3">
                           <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                           <Input
                             id="login-password"
@@ -200,17 +200,11 @@ export default function AuthPage() {
                             placeholder="••••••••"
                             className="pl-10"
                             onChange={(e) => setPassword(e.target.value)}
+                            minLength={6}
                             required
                           />
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="text-sm text-primary hover:underline hover:cursor-pointer"
-                        onClick={() => {}}
-                      >
-                        Forgot password?
-                      </button>
                     </div>
 
                     {error && (
@@ -221,7 +215,7 @@ export default function AuthPage() {
 
                     <button
                       type="submit"
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg p-2 hover:cursor-pointer transition-all duration-200"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg mt-3 p-2 hover:cursor-pointer transition-all duration-200"
                       disabled={isLoading}
                     >
                       {isLoading ? "Signing in..." : "Sign In"}
@@ -244,6 +238,8 @@ export default function AuthPage() {
                           placeholder="John Doe"
                           className="pl-10"
                           onChange={(e) => setName(e.target.value)}
+                          maxLength={25}
+                          pattern="[A-Za-z\s]+"
                           required
                         />
                       </div>
@@ -278,6 +274,7 @@ export default function AuthPage() {
                           placeholder="••••••••"
                           className="pl-10"
                           onChange={(e) => setPassword(e.target.value)}
+                          minLength={6}
                           required
                         />
                       </div>
@@ -298,6 +295,7 @@ export default function AuthPage() {
                           placeholder="••••••••"
                           className="pl-10"
                           onChange={(e) => setConfirmPassword(e.target.value)}
+                          minLength={6}
                           required
                         />
                       </div>
