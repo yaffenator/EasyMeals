@@ -46,7 +46,8 @@ for _k in list(MASTER_PRICES.keys()):
 _FIRESTORE_CATEGORY_SUFFIXES: list[str] = [
     "_meat", "_poultry", "_vegetables", "_produce", "_grains",
     "_dairy", "_pantry", "_seafood", "_canned goods", "_canned_goods",
-    "_uncategorized",
+    "_uncategorized", "_spices", "_bakery", "_frozen", "_beverage",
+    "_protein", "_other", "_condiments", "_herbs",
 ]
 
 

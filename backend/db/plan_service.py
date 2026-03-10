@@ -1014,18 +1014,14 @@ def _complete_plan_details_in_background(
                 f"index={index + 1}/{total_meals} name={outline.name}"
             )
 
-        futures: dict[Any, tuple[int, MealOutline]] = {}
-        with ThreadPoolExecutor(max_workers=MEAL_DETAIL_PARALLELISM) as detail_executor:
-            for index, outline in enumerate(outlines):
-                future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
-                futures[future] = (index, outline)
-                # Stagger submissions so we don't slam the Gemini API with all 28 calls at once.
-                # With parallelism=3 and 2s stagger, calls spread across ~18s instead of all at once.
-                if index > 0 and index % MEAL_DETAIL_PARALLELISM == 0:
-                    time.sleep(MEAL_DETAIL_SUBMIT_STAGGER_SECONDS)
-
-            for future in as_completed(futures):
-                index, outline = futures[future]
+        # Process meals in true batches: submit MEAL_DETAIL_PARALLELISM at a time,
+        # wait for ALL of them to finish, then submit the next batch.
+        # This ensures at most MEAL_DETAIL_PARALLELISM concurrent Gemini calls at any moment,
+        # which prevents API queuing that pushes calls past the timeout window.
+        def _process_batch(batch_futures: dict[Any, tuple[int, MealOutline]]) -> None:
+            nonlocal failed_count
+            for future in as_completed(batch_futures):
+                index, outline = batch_futures[future]
                 week_index = index // 7
                 meal_index = index % 7
                 current_meal = dict(working_weeks[week_index]["meals"][meal_index])
@@ -1086,6 +1082,26 @@ def _complete_plan_details_in_background(
                     status="generating",
                     failed_count=failed_count,
                 )
+
+        # Submit and drain one batch at a time so Gemini never sees more than
+        # MEAL_DETAIL_PARALLELISM concurrent requests.
+        with ThreadPoolExecutor(max_workers=MEAL_DETAIL_PARALLELISM) as detail_executor:
+            batch: dict[Any, tuple[int, MealOutline]] = {}
+            for index, outline in enumerate(outlines):
+                future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
+                batch[future] = (index, outline)
+                is_batch_full = len(batch) == MEAL_DETAIL_PARALLELISM
+                is_last = index == len(outlines) - 1
+                if is_batch_full or is_last:
+                    batch_num = (index // MEAL_DETAIL_PARALLELISM) + 1
+                    print(
+                        f"[plan_service] request_id={request_id} stage=batch_start "
+                        f"batch={batch_num} size={len(batch)}"
+                    )
+                    _process_batch(batch)
+                    batch = {}
+                    if not is_last:
+                        time.sleep(MEAL_DETAIL_SUBMIT_STAGGER_SECONDS)
 
         completed_meals = [meal for meal in _flatten_weeks(working_weeks) if meal.get("status") == "completed"]
         all_completed = len(completed_meals) == len(outlines)
