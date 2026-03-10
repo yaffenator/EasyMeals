@@ -15,10 +15,6 @@ from firebase_admin import credentials
 
 load_dotenv()
 
-from db.firestore_client import db
-from db.plan_service import GenerationConflictError, PlanGenerationRequest, generate_and_store_plan
-from db.rating_service import rate_meal
-
 if not firebase_admin._apps:
     # Check if we are in the cloud by looking for our environment variable
     firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
@@ -32,6 +28,11 @@ if not firebase_admin._apps:
         cred = credentials.Certificate("secrets/serviceAccountKey.json")
         
     firebase_admin.initialize_app(cred)
+
+# Now that Firebase is initialized, these files can safely call firestore.client()
+from db.firestore_client import db
+from db.plan_service import GenerationConflictError, PlanGenerationRequest, generate_and_store_plan
+from db.rating_service import rate_meal
 
 app = FastAPI(title="EasyMeals Backend API")
 
