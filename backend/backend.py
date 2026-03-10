@@ -19,8 +19,17 @@ from db.plan_service import GenerationConflictError, PlanGenerationRequest, gene
 from db.rating_service import rate_meal
 
 if not firebase_admin._apps:
-    # Point this to wherever you saved your Firebase service account key JSON file
-    cred = credentials.Certificate("secrets/serviceAccountKey.json") 
+    # Check if we are in the cloud by looking for our environment variable
+    firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+    
+    if firebase_env_creds:
+        # If in Render, load the credentials from the environment variable
+        cred_dict = json.loads(firebase_env_creds)
+        cred = credentials.Certificate(cred_dict)
+    else:
+        # If running locally, just use the file.
+        cred = credentials.Certificate("secrets/serviceAccountKey.json")
+        
     firebase_admin.initialize_app(cred)
 
 app = FastAPI(title="EasyMeals Backend API")
