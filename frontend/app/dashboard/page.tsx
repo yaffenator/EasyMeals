@@ -119,27 +119,29 @@ export default function Dashboard() {
   const [isRefreshingPlan, setIsRefreshingPlan] = useState(false);
 
   const router = useRouter();
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const typedCurrentUser = currentUser as
     | { displayName?: string | null; email?: string | null }
     | null
     | undefined;
 
-  // Auth check
+  // Auth check & redirect to login
   useEffect(() => {
-    if (!currentUser && !auth.currentUser) {
+    // Only redirect if Firebase is DONE loading AND there is no user
+    if (!loading && !currentUser) {
       router.push("/login");
     }
-  }, [currentUser, router]);
+  }, [currentUser, loading, router]);
 
   // Check Firestore for questionnaire status
   useEffect(() => {
     const checkQuestionnaireStatus = async () => {
-      const uid = auth.currentUser?.uid;
+      const uid = auth.currentUser?.uid || auth.currentUser?.uid;
       if (uid) {
         try {
           const userRef = doc(db, "users", uid);
           const userSnap = await getDoc(userRef);
+
           if (userSnap.exists()) {
             const userData = userSnap.data();
             setQuestionnaireCompleted(
@@ -154,8 +156,21 @@ export default function Dashboard() {
     checkQuestionnaireStatus();
   }, [currentUser, mealPlan]);
 
-  // 2. The hydration logic (useEffect) has been REMOVED.
-  // It now lives in MealPlanContext.tsx to allow background processing.
+  // Show a loading screen (or return null) while Firebase checks
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <span className="ml-4 text-lg text-muted-foreground">
+          Logging you in...
+        </span>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return null;
+  }
 
   const handleCreateMealPlan = (fullMealPlan: unknown) => {
     setMealPlan(fullMealPlan as MealPlan); // Updates the Global Context
@@ -190,6 +205,12 @@ export default function Dashboard() {
     "monthlyBudget" in mealPlan.preferences
       ? mealPlan.preferences.monthlyBudget
       : mealPlan?.monthlyBudget;
+  const metadata = mealPlan?.metadata && typeof mealPlan.metadata === "object" ? mealPlan.metadata : undefined;
+  const budgetMet = typeof metadata?.budgetMet === "boolean" ? metadata.budgetMet : undefined;
+  const overBudgetBy =
+    typeof metadata?.overBudgetBy === "number"
+      ? metadata.overBudgetBy
+      : Math.max(0, parseMoney(mealPlan?.estimatedTotalCost) - parseMoney(prefBudget));
 
   if (isLoading) {
     return (
@@ -280,6 +301,11 @@ export default function Dashboard() {
             Recipes optimized for your $
             {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
+          {budgetMet === false && overBudgetBy > 0 && (
+            <p className="mt-2 text-sm text-amber-700">
+              This plan is ${overBudgetBy.toFixed(2)} over the budget.
+            </p>
+          )}
           {(mealPlan.status || "").toLowerCase() === "generating" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Building meal details in the background. Cards unlock as each meal

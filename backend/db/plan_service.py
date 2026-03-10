@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -87,7 +88,11 @@ TODO_FLOW = [
 
 PLAN_GENERATION_MAX_WORKERS = max(1, int(os.getenv("PLAN_GENERATION_MAX_WORKERS", "2")))
 PLAN_GENERATION_EXECUTOR = ThreadPoolExecutor(max_workers=PLAN_GENERATION_MAX_WORKERS)
-MEAL_DETAIL_PARALLELISM = max(1, int(os.getenv("MEAL_DETAIL_PARALLELISM", "4")))
+# Keep parallelism low: each Gemini call can take 30-90s and the API has rate limits.
+# Too many concurrent calls causes queuing that pushes individual calls past the timeout.
+# 3 concurrent calls with a 2s stagger between submissions is a safe default.
+MEAL_DETAIL_PARALLELISM = max(1, int(os.getenv("MEAL_DETAIL_PARALLELISM", "3")))
+MEAL_DETAIL_SUBMIT_STAGGER_SECONDS = float(os.getenv("MEAL_DETAIL_SUBMIT_STAGGER_SECONDS", "2.0"))
 DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 
@@ -1009,14 +1014,14 @@ def _complete_plan_details_in_background(
                 f"index={index + 1}/{total_meals} name={outline.name}"
             )
 
-        futures: dict[Any, tuple[int, MealOutline]] = {}
-        with ThreadPoolExecutor(max_workers=MEAL_DETAIL_PARALLELISM) as detail_executor:
-            for index, outline in enumerate(outlines):
-                future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
-                futures[future] = (index, outline)
-
-            for future in as_completed(futures):
-                index, outline = futures[future]
+        # Process meals in true batches: submit MEAL_DETAIL_PARALLELISM at a time,
+        # wait for ALL of them to finish, then submit the next batch.
+        # This ensures at most MEAL_DETAIL_PARALLELISM concurrent Gemini calls at any moment,
+        # which prevents API queuing that pushes calls past the timeout window.
+        def _process_batch(batch_futures: dict[Any, tuple[int, MealOutline]]) -> None:
+            nonlocal failed_count
+            for future in as_completed(batch_futures):
+                index, outline = batch_futures[future]
                 week_index = index // 7
                 meal_index = index % 7
                 current_meal = dict(working_weeks[week_index]["meals"][meal_index])
@@ -1051,7 +1056,10 @@ def _complete_plan_details_in_background(
                         if key in current_meal and merged_meal.get(key) in (None, ""):
                             merged_meal[key] = current_meal[key]
 
-                    working_weeks[week_index]["meals"][meal_index] = merged_meal
+                    # Strip Firestore DocumentReference before writing to the weeks array.
+                    # Embedded references in array fields cause "even number of path elements" errors.
+                    merged_meal_for_storage = {k: v for k, v in merged_meal.items() if k != "recipeRef"}
+                    working_weeks[week_index]["meals"][meal_index] = merged_meal_for_storage
                     print(
                         f"[plan_service] request_id={request_id} stage=meal_completed "
                         f"index={index + 1}/{total_meals} name={outline.name}"
@@ -1060,6 +1068,7 @@ def _complete_plan_details_in_background(
                     failed_count += 1
                     fallback_meal = _build_fallback_meal(request, current_meal, outline)
                     fallback_meal["generationError"] = str(exc)[:500]
+                    fallback_meal.pop("recipeRef", None)
                     working_weeks[week_index]["meals"][meal_index] = fallback_meal
                     print(
                         f"[plan_service] request_id={request_id} stage=meal_fallback "
@@ -1074,10 +1083,34 @@ def _complete_plan_details_in_background(
                     failed_count=failed_count,
                 )
 
+        # Submit and drain one batch at a time so Gemini never sees more than
+        # MEAL_DETAIL_PARALLELISM concurrent requests.
+        with ThreadPoolExecutor(max_workers=MEAL_DETAIL_PARALLELISM) as detail_executor:
+            batch: dict[Any, tuple[int, MealOutline]] = {}
+            for index, outline in enumerate(outlines):
+                future = detail_executor.submit(_generate_meal_detail_candidate, preferences, outline)
+                batch[future] = (index, outline)
+                is_batch_full = len(batch) == MEAL_DETAIL_PARALLELISM
+                is_last = index == len(outlines) - 1
+                if is_batch_full or is_last:
+                    batch_num = (index // MEAL_DETAIL_PARALLELISM) + 1
+                    print(
+                        f"[plan_service] request_id={request_id} stage=batch_start "
+                        f"batch={batch_num} size={len(batch)}"
+                    )
+                    _process_batch(batch)
+                    batch = {}
+                    if not is_last:
+                        time.sleep(MEAL_DETAIL_SUBMIT_STAGGER_SECONDS)
+
         completed_meals = [meal for meal in _flatten_weeks(working_weeks) if meal.get("status") == "completed"]
         all_completed = len(completed_meals) == len(outlines)
 
         if all_completed:
+            final_total_cost = _total_cost(completed_meals)
+            budget_met = final_total_cost <= request.monthlyBudget
+            over_budget_by = round(max(0.0, final_total_cost - request.monthlyBudget), 2)
+            budget_headroom = round(max(0.0, request.monthlyBudget - final_total_cost), 2)
             superseded_count = supersede_ready_plans_for_month(request.userId, target_month, plan_id)
             meal_history_added = append_meal_history(
                 user_id=request.userId,
@@ -1103,6 +1136,11 @@ def _complete_plan_details_in_background(
                         "mealHistoryAdded": meal_history_added,
                         "fallbackMealsUsed": failed_count,
                         "supersededPlansCount": superseded_count,
+                        "budgetTarget": request.monthlyBudget,
+                        "finalTotal": final_total_cost,
+                        "budgetMet": budget_met,
+                        "overBudgetBy": over_budget_by,
+                        "budgetHeadroom": budget_headroom,
                         "todoFlow": TODO_FLOW,
                         "timing": {
                             "startedAt": plan_started_at.isoformat(),

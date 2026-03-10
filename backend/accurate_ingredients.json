@@ -1,0 +1,788 @@
+{
+  "PROTEIN_MEAT": {
+    "beef_ground_90_10": {
+      "name": "ground beef (90/10)",
+      "price": 7.15,
+      "unit": "lb"
+    },
+    "beef_sirloin_steak": {
+      "name": "top sirloin steak",
+      "price": 10.49,
+      "unit": "lb"
+    },
+    "beef_chuck_roast": {
+      "name": "beef chuck roast",
+      "price": 7.85,
+      "unit": "lb"
+    },
+    "pork_chops_boneless": {
+      "name": "boneless pork chops",
+      "price": 4.99,
+      "unit": "lb"
+    },
+    "pork_tenderloin": {
+      "name": "pork tenderloin",
+      "price": 5.8,
+      "unit": "lb"
+    },
+    "pork_ground": {
+      "name": "ground pork",
+      "price": 3.99,
+      "unit": "lb"
+    },
+    "bacon_sliced": {
+      "name": "bacon",
+      "price": 6.49,
+      "unit": "lb"
+    },
+    "sausage_italian": {
+      "name": "italian sausage",
+      "price": 5.49,
+      "unit": "lb"
+    }
+  },
+  "PROTEIN_POULTRY": {
+    "chicken_breast_boneless": {
+      "name": "boneless chicken breast",
+      "price": 3.49,
+      "unit": "lb"
+    },
+    "chicken_thighs_boneless": {
+      "name": "boneless chicken thighs",
+      "price": 4.29,
+      "unit": "lb"
+    },
+    "chicken_thighs_bonein": {
+      "name": "bone-in chicken thighs",
+      "price": 2.19,
+      "unit": "lb"
+    },
+    "chicken_drumsticks": {
+      "name": "chicken drumsticks",
+      "price": 1.79,
+      "unit": "lb"
+    },
+    "chicken_ground": {
+      "name": "ground chicken",
+      "price": 4.99,
+      "unit": "lb"
+    },
+    "turkey_ground": {
+      "name": "ground turkey",
+      "price": 5.29,
+      "unit": "lb"
+    }
+  },
+  "PROTEIN_FISH_SEAFOOD": {
+    "salmon_fillet": {
+      "name": "salmon fillet",
+      "price": 12.99,
+      "unit": "lb"
+    },
+    "tilapia_fillet": {
+      "name": "tilapia fillet",
+      "price": 6.99,
+      "unit": "lb"
+    },
+    "shrimp_frozen_peeled": {
+      "name": "frozen peeled shrimp",
+      "price": 8.5,
+      "unit": "lb"
+    },
+    "tuna_canned": {
+      "name": "canned tuna",
+      "price": 1.5,
+      "unit": "can"
+    },
+    "cod_fillet": {
+      "name": "cod fillet",
+      "price": 9.49,
+      "unit": "lb"
+    }
+  },
+  "VEGETABLES_FRESH": {
+    "broccoli_florets": {
+      "name": "broccoli florets",
+      "price": 2.49,
+      "unit": "lb"
+    },
+    "carrots_whole": {
+      "name": "carrots",
+      "price": 0.99,
+      "unit": "lb"
+    },
+    "spinach_fresh": {
+      "name": "fresh spinach",
+      "price": 1.75,
+      "unit": "cup"
+    },
+    "kale": {
+      "name": "kale",
+      "price": 0.63,
+      "unit": "cup"
+    },
+    "bell_pepper_red": {
+      "name": "red bell pepper",
+      "price": 1.25,
+      "unit": "each"
+    },
+    "bell_pepper_green": {
+      "name": "green bell pepper",
+      "price": 0.89,
+      "unit": "each"
+    },
+    "onion_yellow": {
+      "name": "yellow onion",
+      "price": 0.95,
+      "unit": "lb"
+    },
+    "onion_red": {
+      "name": "red onion",
+      "price": 1.29,
+      "unit": "lb"
+    },
+    "garlic_clove": {
+      "name": "garlic clove",
+      "price": 0.06,
+      "unit": "clove"
+    },
+    "potato_russet": {
+      "name": "russet potato",
+      "price": 0.85,
+      "unit": "lb"
+    },
+    "potato_sweet": {
+      "name": "sweet potato",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "zucchini": {
+      "name": "zucchini",
+      "price": 1.79,
+      "unit": "lb"
+    },
+    "cucumber_english": {
+      "name": "english cucumber",
+      "price": 1.5,
+      "unit": "each"
+    },
+    "tomato_roma": {
+      "name": "roma tomato",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "asparagus": {
+      "name": "asparagus",
+      "price": 3.99,
+      "unit": "lb"
+    },
+    "cauliflower": {
+      "name": "cauliflower",
+      "price": 0.87,
+      "unit": "cup"
+    },
+    "cabbage_green": {
+      "name": "green cabbage",
+      "price": 0.79,
+      "unit": "lb"
+    },
+    "mushrooms_cremini": {
+      "name": "cremini mushrooms",
+      "price": 3.49,
+      "unit": "lb"
+    },
+    "mushrooms_white": {
+      "name": "white mushrooms",
+      "price": 2.99,
+      "unit": "lb"
+    },
+    "peas_frozen": {
+      "name": "frozen peas",
+      "price": 0.25,
+      "unit": "cup"
+    },
+    "corn_frozen": {
+      "name": "frozen corn",
+      "price": 0.2,
+      "unit": "cup"
+    },
+    "green_beans_fresh": {
+      "name": "green beans",
+      "price": 1.99,
+      "unit": "lb"
+    },
+    "celery": {
+      "name": "celery",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "eggplant": {
+      "name": "eggplant",
+      "price": 1.29,
+      "unit": "each"
+    },
+    "jalapeno": {
+      "name": "jalapeno pepper",
+      "price": 0.3,
+      "unit": "each"
+    },
+    "lime": {
+      "name": "lime",
+      "price": 0.5,
+      "unit": "each"
+    },
+    "lemon": {
+      "name": "lemon",
+      "price": 0.6,
+      "unit": "each"
+    },
+    "avocado": {
+      "name": "avocado",
+      "unit": "each",
+      "price": 1.29
+    },
+    "green_onion": {
+      "name": "green onion",
+      "unit": "bunch",
+      "price": 0.89
+    },
+    "shallot": {
+      "name": "shallot",
+      "unit": "each",
+      "price": 0.45
+    },
+    "cabbage_napa": {
+      "name": "napa cabbage",
+      "unit": "lb",
+      "price": 0.99
+    },
+    "olives_kalamata": {
+      "name": "kalamata olives",
+      "unit": "oz",
+      "price": 0.35
+    },
+    "parsley_fresh": {
+      "name": "fresh parsley",
+      "unit": "bunch",
+      "price": 0.99
+    },
+    "cilantro_fresh": {
+      "name": "fresh cilantro",
+      "unit": "bunch",
+      "price": 0.99
+    },
+    "basil_fresh": {
+      "name": "fresh basil",
+      "unit": "bunch",
+      "price": 1.99
+    }
+  },
+  "GRAINS_STARCHES": {
+    "rice_white_jasmine": {
+      "name": "jasmine rice",
+      "price": 0.6,
+      "unit": "cup"
+    },
+    "rice_brown": {
+      "name": "brown rice",
+      "price": 0.55,
+      "unit": "cup"
+    },
+    "quinoa": {
+      "name": "quinoa",
+      "price": 1.2,
+      "unit": "cup"
+    },
+    "pasta_spaghetti": {
+      "name": "spaghetti pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "pasta_penne": {
+      "name": "penne pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "oats_rolled": {
+      "name": "rolled oats",
+      "price": 0.4,
+      "unit": "cup"
+    },
+    "bread_whole_wheat": {
+      "name": "whole wheat bread",
+      "price": 0.31,
+      "unit": "slice"
+    },
+    "tortillas_corn": {
+      "name": "corn tortillas",
+      "price": 0.21,
+      "unit": "each"
+    },
+    "tortillas_flour": {
+      "name": "flour tortillas",
+      "price": 0.27,
+      "unit": "each"
+    },
+    "pasta_linguine": {
+      "name": "linguine pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "pasta_fettuccine": {
+      "name": "fettuccine pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "pasta_rotini": {
+      "name": "rotini pasta",
+      "price": 1.49,
+      "unit": "lb"
+    },
+    "rice_arborio": {
+      "name": "arborio rice",
+      "price": 0.95,
+      "unit": "cup"
+    },
+    "lentils_green": {
+      "name": "green lentils",
+      "price": 0.55,
+      "unit": "cup"
+    },
+    "lentils_red": {
+      "name": "red lentils",
+      "price": 0.5,
+      "unit": "cup"
+    },
+    "breadcrumbs": {
+      "name": "breadcrumbs",
+      "price": 0.2,
+      "unit": "cup"
+    },
+    "pizza_dough": {
+      "name": "pizza dough",
+      "price": 2.99,
+      "unit": "each"
+    },
+    "pasta_shells": {
+      "name": "shell pasta",
+      "unit": "lb",
+      "price": 1.49
+    },
+    "pasta_bowtie": {
+      "name": "bowtie pasta",
+      "unit": "lb",
+      "price": 1.49
+    },
+    "rice_white_long_grain": {
+      "name": "long grain white rice",
+      "unit": "cup",
+      "price": 0.45
+    },
+    "flatbread": {
+      "name": "flatbread",
+      "unit": "each",
+      "price": 0.75
+    },
+    "lentils_brown": {
+      "name": "brown lentils",
+      "unit": "cup",
+      "price": 0.45
+    }
+  },
+  "DAIRY_EGGS": {
+    "eggs_large": {
+      "name": "large eggs",
+      "price": 0.22,
+      "unit": "each"
+    },
+    "milk_whole": {
+      "name": "whole milk",
+      "price": 0.24,
+      "unit": "cup"
+    },
+    "butter_unsalted": {
+      "name": "unsalted butter",
+      "price": 0.15,
+      "unit": "tbsp"
+    },
+    "cheese_cheddar_shredded": {
+      "name": "shredded cheddar",
+      "price": 1.13,
+      "unit": "cup"
+    },
+    "cheese_parmesan": {
+      "name": "parmesan cheese",
+      "price": 0.25,
+      "unit": "tbsp"
+    },
+    "yogurt_greek_plain": {
+      "name": "plain greek yogurt",
+      "price": 0.68,
+      "unit": "cup"
+    },
+    "cheese_mozzarella": {
+      "name": "mozzarella cheese",
+      "price": 0.95,
+      "unit": "cup"
+    },
+    "cheese_ricotta": {
+      "name": "ricotta cheese",
+      "price": 0.75,
+      "unit": "cup"
+    },
+    "cheese_feta": {
+      "name": "feta cheese",
+      "price": 1.25,
+      "unit": "cup"
+    },
+    "cream_heavy": {
+      "name": "heavy cream",
+      "price": 0.5,
+      "unit": "cup"
+    },
+    "cream_cheese": {
+      "name": "cream cheese",
+      "price": 0.6,
+      "unit": "oz"
+    },
+    "sour_cream": {
+      "name": "sour cream",
+      "price": 0.4,
+      "unit": "cup"
+    },
+    "cheese_goat": {
+      "name": "goat cheese",
+      "unit": "oz",
+      "price": 0.62
+    }
+  },
+  "PANTRY_STAPLES": {
+    "olive_oil_evoo": {
+      "name": "extra virgin olive oil",
+      "price": 0.22,
+      "unit": "tbsp"
+    },
+    "vegetable_oil": {
+      "name": "vegetable oil",
+      "price": 0.08,
+      "unit": "tbsp"
+    },
+    "soy_sauce": {
+      "name": "soy sauce",
+      "price": 0.13,
+      "unit": "tbsp"
+    },
+    "chicken_broth": {
+      "name": "chicken broth",
+      "price": 0.31,
+      "unit": "cup"
+    },
+    "black_beans_canned": {
+      "name": "canned black beans",
+      "price": 0.99,
+      "unit": "can"
+    },
+    "chickpeas_canned": {
+      "name": "canned chickpeas",
+      "price": 0.99,
+      "unit": "can"
+    },
+    "tomato_paste": {
+      "name": "tomato paste",
+      "price": 0.15,
+      "unit": "tbsp"
+    },
+    "diced_tomatoes_canned": {
+      "name": "canned diced tomatoes",
+      "price": 1.25,
+      "unit": "can"
+    },
+    "peanut_butter": {
+      "name": "peanut butter",
+      "price": 0.22,
+      "unit": "tbsp"
+    },
+    "honey": {
+      "name": "honey",
+      "price": 0.3,
+      "unit": "tbsp"
+    },
+    "kidney_beans_canned": {
+      "name": "canned kidney beans",
+      "price": 0.99,
+      "unit": "can"
+    },
+    "tomato_sauce_canned": {
+      "name": "canned tomato sauce",
+      "price": 1.09,
+      "unit": "can"
+    },
+    "crushed_tomatoes": {
+      "name": "crushed tomatoes",
+      "price": 1.39,
+      "unit": "can"
+    },
+    "vegetable_broth": {
+      "name": "vegetable broth",
+      "price": 0.31,
+      "unit": "cup"
+    },
+    "beef_broth": {
+      "name": "beef broth",
+      "price": 0.31,
+      "unit": "cup"
+    },
+    "flour_all_purpose": {
+      "name": "all-purpose flour",
+      "price": 0.12,
+      "unit": "cup"
+    },
+    "sugar_granulated": {
+      "name": "granulated sugar",
+      "price": 0.08,
+      "unit": "cup"
+    },
+    "italian_seasoning": {
+      "name": "italian seasoning",
+      "price": 0.1,
+      "unit": "tsp"
+    },
+    "cumin_ground": {
+      "name": "ground cumin",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "chili_powder": {
+      "name": "chili powder",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "paprika": {
+      "name": "paprika",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "oregano_dried": {
+      "name": "dried oregano",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "red_pepper_flakes": {
+      "name": "red pepper flakes",
+      "price": 0.08,
+      "unit": "tsp"
+    },
+    "worcestershire": {
+      "name": "worcestershire sauce",
+      "price": 0.15,
+      "unit": "tbsp"
+    },
+    "hot_sauce": {
+      "name": "hot sauce",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "salsa_jarred": {
+      "name": "jarred salsa",
+      "price": 0.25,
+      "unit": "cup"
+    },
+    "bbq_sauce": {
+      "name": "BBQ sauce",
+      "price": 0.2,
+      "unit": "tbsp"
+    },
+    "white_wine": {
+      "name": "white wine",
+      "price": 0.75,
+      "unit": "cup"
+    },
+    "apple_cider_vinegar": {
+      "name": "apple cider vinegar",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "corn_starch": {
+      "name": "cornstarch",
+      "price": 0.1,
+      "unit": "tbsp"
+    },
+    "refried_beans_canned": {
+      "name": "canned refried beans",
+      "price": 1.29,
+      "unit": "can"
+    },
+    "pesto_jarred": {
+      "name": "jarred pesto",
+      "price": 0.45,
+      "unit": "tbsp"
+    },
+    "coconut_milk_canned": {
+      "name": "canned coconut milk",
+      "price": 1.89,
+      "unit": "can"
+    },
+    "curry_powder": {
+      "name": "curry powder",
+      "price": 0.1,
+      "unit": "tsp"
+    },
+    "garam_masala": {
+      "name": "garam masala",
+      "price": 0.12,
+      "unit": "tsp"
+    },
+    "bay_leaves": {
+      "name": "bay leaves",
+      "price": 0.05,
+      "unit": "each"
+    },
+    "teriyaki_sauce": {
+      "name": "teriyaki sauce",
+      "unit": "tbsp",
+      "price": 0.12
+    },
+    "sesame_oil": {
+      "name": "sesame oil",
+      "unit": "tbsp",
+      "price": 0.28
+    },
+    "sesame_seeds": {
+      "name": "sesame seeds",
+      "unit": "tsp",
+      "price": 0.08
+    },
+    "fish_sauce": {
+      "name": "fish sauce",
+      "unit": "tbsp",
+      "price": 0.15
+    },
+    "curry_paste_red": {
+      "name": "red curry paste",
+      "unit": "tbsp",
+      "price": 0.35
+    },
+    "curry_paste_green": {
+      "name": "green curry paste",
+      "unit": "tbsp",
+      "price": 0.35
+    },
+    "tomato_sauce_marinara": {
+      "name": "marinara sauce",
+      "unit": "cup",
+      "price": 0.85
+    },
+    "olives_black_canned": {
+      "name": "black olives canned",
+      "unit": "oz",
+      "price": 0.22
+    },
+    "brown_sugar": {
+      "name": "brown sugar",
+      "unit": "tbsp",
+      "price": 0.05
+    },
+    "maple_syrup": {
+      "name": "maple syrup",
+      "unit": "tbsp",
+      "price": 0.38
+    },
+    "vanilla_extract": {
+      "name": "vanilla extract",
+      "unit": "tsp",
+      "price": 0.22
+    },
+    "balsamic_vinegar": {
+      "name": "balsamic vinegar",
+      "unit": "tbsp",
+      "price": 0.18
+    },
+    "dijon_mustard": {
+      "name": "dijon mustard",
+      "unit": "tbsp",
+      "price": 0.12
+    },
+    "mayonnaise": {
+      "name": "mayonnaise",
+      "unit": "tbsp",
+      "price": 0.1
+    },
+    "panko_breadcrumbs": {
+      "name": "panko breadcrumbs",
+      "unit": "cup",
+      "price": 0.55
+    },
+    "salt": {
+      "name": "salt",
+      "unit": "tsp",
+      "price": 0.01
+    },
+    "black_pepper": {
+      "name": "black pepper",
+      "unit": "tsp",
+      "price": 0.08
+    },
+    "garlic_powder": {
+      "name": "garlic powder",
+      "unit": "tsp",
+      "price": 0.07
+    },
+    "onion_powder": {
+      "name": "onion powder",
+      "unit": "tsp",
+      "price": 0.06
+    },
+    "thyme_dried": {
+      "name": "dried thyme",
+      "unit": "tsp",
+      "price": 0.09
+    },
+    "rosemary_dried": {
+      "name": "dried rosemary",
+      "unit": "tsp",
+      "price": 0.09
+    },
+    "basil_dried": {
+      "name": "dried basil",
+      "unit": "tsp",
+      "price": 0.08
+    },
+    "cinnamon_ground": {
+      "name": "ground cinnamon",
+      "unit": "tsp",
+      "price": 0.1
+    },
+    "cayenne_pepper": {
+      "name": "cayenne pepper",
+      "unit": "tsp",
+      "price": 0.09
+    },
+    "lime_juice": {
+      "name": "lime juice",
+      "unit": "tbsp",
+      "price": 0.1
+    },
+    "chicken_broth_low_sodium": {
+      "name": "low sodium chicken broth",
+      "unit": "cup",
+      "price": 0.31
+    },
+    "corn_tortilla_chips": {
+      "name": "corn tortilla chips",
+      "unit": "oz",
+      "price": 0.25
+    }
+  },
+  "PROTEIN_OTHER": {
+    "tofu_firm": {
+      "name": "firm tofu",
+      "unit": "lb",
+      "price": 2.49
+    },
+    "tofu_extra_firm": {
+      "name": "extra firm tofu",
+      "unit": "lb",
+      "price": 2.69
+    }
+  }
+}
