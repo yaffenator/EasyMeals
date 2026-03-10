@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const BACKEND_API_URL = ""
+const BACKEND_API_URL = "https://easymeals-imyf.onrender.com"
 const DEFAULT_BACKEND_API_URL = "http://localhost:8000";
 const DEFAULT_TIMEOUT_MS = 180_000;
 const MIN_TIMEOUT_MS = 10_000;
@@ -16,7 +16,7 @@ export class BackendProxyError extends Error {
 }
 
 export function getBackendBaseUrl(): string {
-  const raw = process.env.BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
+  const raw = BACKEND_API_URL || DEFAULT_BACKEND_API_URL;
   return raw.endsWith("/") ? raw.slice(0, -1) : raw;
 }
 
