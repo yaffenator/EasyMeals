@@ -1107,6 +1107,10 @@ def _complete_plan_details_in_background(
         all_completed = len(completed_meals) == len(outlines)
 
         if all_completed:
+            final_total_cost = _total_cost(completed_meals)
+            budget_met = final_total_cost <= request.monthlyBudget
+            over_budget_by = round(max(0.0, final_total_cost - request.monthlyBudget), 2)
+            budget_headroom = round(max(0.0, request.monthlyBudget - final_total_cost), 2)
             superseded_count = supersede_ready_plans_for_month(request.userId, target_month, plan_id)
             meal_history_added = append_meal_history(
                 user_id=request.userId,
@@ -1132,6 +1136,11 @@ def _complete_plan_details_in_background(
                         "mealHistoryAdded": meal_history_added,
                         "fallbackMealsUsed": failed_count,
                         "supersededPlansCount": superseded_count,
+                        "budgetTarget": request.monthlyBudget,
+                        "finalTotal": final_total_cost,
+                        "budgetMet": budget_met,
+                        "overBudgetBy": over_budget_by,
+                        "budgetHeadroom": budget_headroom,
                         "todoFlow": TODO_FLOW,
                         "timing": {
                             "startedAt": plan_started_at.isoformat(),

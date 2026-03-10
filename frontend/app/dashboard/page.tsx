@@ -205,6 +205,12 @@ export default function Dashboard() {
     "monthlyBudget" in mealPlan.preferences
       ? mealPlan.preferences.monthlyBudget
       : mealPlan?.monthlyBudget;
+  const metadata = mealPlan?.metadata && typeof mealPlan.metadata === "object" ? mealPlan.metadata : undefined;
+  const budgetMet = typeof metadata?.budgetMet === "boolean" ? metadata.budgetMet : undefined;
+  const overBudgetBy =
+    typeof metadata?.overBudgetBy === "number"
+      ? metadata.overBudgetBy
+      : Math.max(0, parseMoney(mealPlan?.estimatedTotalCost) - parseMoney(prefBudget));
 
   if (isLoading) {
     return (
@@ -295,6 +301,11 @@ export default function Dashboard() {
             Recipes optimized for your $
             {typeof prefBudget === "number" ? prefBudget : 0}/month budget
           </p>
+          {budgetMet === false && overBudgetBy > 0 && (
+            <p className="mt-2 text-sm text-amber-700">
+              This plan is ${overBudgetBy.toFixed(2)} over the budget.
+            </p>
+          )}
           {(mealPlan.status || "").toLowerCase() === "generating" && (
             <p className="mt-2 text-sm text-muted-foreground">
               Building meal details in the background. Cards unlock as each meal
