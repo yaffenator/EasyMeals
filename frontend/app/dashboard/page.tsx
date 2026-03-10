@@ -161,6 +161,9 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <span className="ml-4 text-lg text-muted-foreground">
+          Logging you in...
+        </span>
       </div>
     );
   }
@@ -168,9 +171,6 @@ export default function Dashboard() {
   if (!currentUser) {
     return null;
   }
-
-  // 2. The hydration logic (useEffect) has been REMOVED.
-  // It now lives in MealPlanContext.tsx to allow background processing.
 
   const handleCreateMealPlan = (fullMealPlan: unknown) => {
     setMealPlan(fullMealPlan as MealPlan); // Updates the Global Context
