@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import json
 import os
 import re
 import sys
@@ -56,7 +57,7 @@ def resolve_storage_bucket(project_id: Optional[str]) -> str:
         or ""
     ).strip()
     if configured:
-        return configured
+        return configured.replace("gs://", "")
 
     inferred_project = (
         project_id
