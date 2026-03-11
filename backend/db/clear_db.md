@@ -15,6 +15,6 @@ By default, the script now creates `_keepalive` in each cleared top-level
 collection so collections remain visible in Firestore console.
 
 Credentials lookup order:
-1) `GOOGLE_APPLICATION_CREDENTIALS`
+1) `FIREBASE_SERVICE_ACCOUNT` (JSON string)
 2) `backend/secrets/serviceAccountKey.json`
 3) `backend/serviceAccountKey.json`

@@ -40,7 +40,7 @@ Before running tests, ensure the following:
 - Backend dependencies are installed:
   - pip install -r requirements.txt **We haven't added a requirements.txt yet but plan to have one in the future**
 - The .env file is configured correctly
-- The Firestore service account key is located in the /secrets directory
+- Firestore credentials are provided either via `FIREBASE_SERVICE_ACCOUNT` (JSON string) or a local `backend/secrets/serviceAccountKey.json` file
 - Internet access is available (required for Firestore and Gemini API interaction)
 
 ### Running the Test Suite

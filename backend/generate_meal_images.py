@@ -17,12 +17,13 @@ Behavior:
 
 Env:
 - GEMINI_API_KEY is required
-- GOOGLE_APPLICATION_CREDENTIALS or backend/serviceAccountKey.json
+- FIREBASE_SERVICE_ACCOUNT (JSON string) or backend/serviceAccountKey.json
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -76,25 +77,23 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
     if firebase_admin._apps:
         return firestore.client()
 
-    key_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()
     script_dir = Path(__file__).resolve().parent
     local_key_path = script_dir / "serviceAccountKey.json"
     secrets_key_path = script_dir / "secrets" / "serviceAccountKey.json"
 
-    if key_path_env:
-        key_path = Path(key_path_env)
-        if not key_path.exists():
-            raise FileNotFoundError(
-                f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {key_path}"
-            )
-        cred_obj = credentials.Certificate(str(key_path))
+    if firebase_env_creds:
+        try:
+            cred_obj = credentials.Certificate(json.loads(firebase_env_creds))
+        except json.JSONDecodeError as exc:
+            raise ValueError("FIREBASE_SERVICE_ACCOUNT is set, but it is not valid JSON.") from exc
     elif local_key_path.exists():
         cred_obj = credentials.Certificate(str(local_key_path))
     elif secrets_key_path.exists():
         cred_obj = credentials.Certificate(str(secrets_key_path))
     else:
         raise FileNotFoundError(
-            "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
+            "No service account key found. Set FIREBASE_SERVICE_ACCOUNT or place "
             "serviceAccountKey.json in backend/ or backend/secrets/."
         )
 

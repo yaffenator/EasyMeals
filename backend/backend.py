@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-import os
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
@@ -16,17 +17,18 @@ from firebase_admin import credentials
 load_dotenv()
 
 if not firebase_admin._apps:
-    # Check if we are in the cloud by looking for our environment variable
-    firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
-    
+    firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()
+
     if firebase_env_creds:
-        # If in Render, load the credentials from the environment variable
-        cred_dict = json.loads(firebase_env_creds)
-        cred = credentials.Certificate(cred_dict)
+        try:
+            cred = credentials.Certificate(json.loads(firebase_env_creds))
+        except json.JSONDecodeError as exc:
+            raise ValueError("FIREBASE_SERVICE_ACCOUNT is set, but it is not valid JSON.") from exc
     else:
-        # If running locally, just use the file.
-        cred = credentials.Certificate("secrets/serviceAccountKey.json")
-        
+        # Local fallback for development.
+        local_cred_path = Path(__file__).resolve().parent / "secrets" / "serviceAccountKey.json"
+        cred = credentials.Certificate(str(local_cred_path))
+
     firebase_admin.initialize_app(cred)
 
 # Now that Firebase is initialized, these files can safely call firestore.client()

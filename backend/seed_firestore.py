@@ -11,7 +11,7 @@ Seeds Firestore with:
 
 Service account setup:
 1) Put `serviceAccountKey.json` in `backend/secrets/`, OR
-2) Set GOOGLE_APPLICATION_CREDENTIALS to the full path to your JSON key.
+2) Set FIREBASE_SERVICE_ACCOUNT to the full JSON credential string.
 
 Run:
   python seed_firestore.py
@@ -25,6 +25,7 @@ Optional:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -46,27 +47,25 @@ def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
     if firebase_admin._apps:
         return firestore.client()
 
-    key_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()
     script_dir = Path(__file__).resolve().parent
     local_candidates = [
         script_dir / "secrets" / "serviceAccountKey.json",
         script_dir / "serviceAccountKey.json",
     ]
 
-    if key_path_env:
-        p = Path(key_path_env)
-        if not p.exists():
-            raise FileNotFoundError(
-                f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {p}"
-            )
-        cred_obj = credentials.Certificate(str(p))
+    if firebase_env_creds:
+        try:
+            cred_obj = credentials.Certificate(json.loads(firebase_env_creds))
+        except json.JSONDecodeError as exc:
+            raise ValueError("FIREBASE_SERVICE_ACCOUNT is set, but it is not valid JSON.") from exc
     else:
         local_key_path = next((p for p in local_candidates if p.exists()), None)
         if local_key_path:
             cred_obj = credentials.Certificate(str(local_key_path))
         else:
             raise FileNotFoundError(
-                "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
+                "No service account key found. Set FIREBASE_SERVICE_ACCOUNT or place "
                 "serviceAccountKey.json in backend/secrets/."
             )
 
