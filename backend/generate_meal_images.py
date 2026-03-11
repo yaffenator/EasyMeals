@@ -23,6 +23,7 @@ Env:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -55,7 +56,7 @@ def resolve_storage_bucket(project_id: Optional[str]) -> str:
         or ""
     ).strip()
     if configured:
-        return configured
+        return configured.replace("gs://", "")
 
     inferred_project = (
         project_id
@@ -72,36 +73,27 @@ def resolve_storage_bucket(project_id: Optional[str]) -> str:
     )
 
 
-def init_firestore(project_id: Optional[str] = None) -> firestore.Client:
-    if firebase_admin._apps:
-        return firestore.client()
+def init_firestore(project_id=None):
+    if not firebase_admin._apps:
+        firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+        
+        if firebase_env_creds:
+            cred_dict = json.loads(firebase_env_creds)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            cred = credentials.Certificate("secrets/serviceAccountKey.json")
+            
+        storage_bucket = os.environ.get("NEXT_PUBLIC_storageBucket", "easymealsdata.appspot.com").replace("gs://", "")
 
-    key_path_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
-    script_dir = Path(__file__).resolve().parent
-    local_key_path = script_dir / "serviceAccountKey.json"
-    secrets_key_path = script_dir / "secrets" / "serviceAccountKey.json"
+        firebase_config = {
+            'storageBucket': storage_bucket
+        }
+        
+        if project_id:
+            firebase_config['projectId'] = project_id
 
-    if key_path_env:
-        key_path = Path(key_path_env)
-        if not key_path.exists():
-            raise FileNotFoundError(
-                f"GOOGLE_APPLICATION_CREDENTIALS is set, but file not found: {key_path}"
-            )
-        cred_obj = credentials.Certificate(str(key_path))
-    elif local_key_path.exists():
-        cred_obj = credentials.Certificate(str(local_key_path))
-    elif secrets_key_path.exists():
-        cred_obj = credentials.Certificate(str(secrets_key_path))
-    else:
-        raise FileNotFoundError(
-            "No service account key found. Set GOOGLE_APPLICATION_CREDENTIALS or place "
-            "serviceAccountKey.json in backend/ or backend/secrets/."
-        )
-
-    options = {"storageBucket": resolve_storage_bucket(project_id)}
-    if project_id:
-        options["projectId"] = project_id
-    firebase_admin.initialize_app(cred_obj, options=options)
+        firebase_admin.initialize_app(cred, firebase_config)
+            
     return firestore.client()
 
 
