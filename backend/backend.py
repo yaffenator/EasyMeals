@@ -16,7 +16,9 @@ from firebase_admin import credentials
 
 load_dotenv()
 
-if not firebase_admin._apps:
+_TESTING_MODE = os.environ.get("TESTING", "").lower() == "true"
+
+if not _TESTING_MODE and not firebase_admin._apps:
     firebase_env_creds = os.environ.get("FIREBASE_SERVICE_ACCOUNT", "").strip()
 
     if firebase_env_creds:
