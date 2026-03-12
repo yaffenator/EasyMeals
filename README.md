@@ -2,6 +2,8 @@
 
 **EasyMeals** automates your meal-prepping goals with a personalized AI nutrition expert. Whether you are managing food benefits, sticking to a strict budget, or pursuing specific fitness goals, EasyMeals creates a comprehensive, month-long plan tailored to your wallet and your health.
 
+**Check out the project here:** https://easy-meals-nine.vercel.app/
+
 ---
 
 ## Working Use Cases (For In-Class BETA Testing)
@@ -9,8 +11,6 @@
 * **Use Case #1:** The user will be able to create an account & log into it successfully through 1. Email/Password Verification, 2. Personal Google Account (OAuth), 3. Personal GitHub Account (OAuth)
 * **Use Case #2:** The registered user will narrow down their health requirements & fitness goals through a variety of health-related inquiries.
 * **Use Case #3:**  Upon completing the health requirements & fitness goals questionnaire, the registered user will receive an itemized list of groceries and curated recipes tailored specifically to their financial constraints and physical objectives.
-
-**Check out the project here:** https://easy-meals-nine.vercel.app/
 
 ---
 
