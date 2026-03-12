@@ -292,7 +292,6 @@ def _normalize_instruction_text(value: str) -> str:
 
     return text
 
-'''
 def build_prompt(preferences: dict[str, Any]) -> str:
     return f"""
 You are a professional nutritionist and chef. Generate a 4-week meal plan.
@@ -368,7 +367,6 @@ Return JSON with this exact top-level shape:
   }}
 }}
 """
-'''
 #The above prompt is the original combined prompt. The following prompts are the new split prompts for a two-pass approach.
 
 def build_name_plan_prompt(preferences: dict[str, Any]) -> str:
@@ -741,28 +739,17 @@ def _call_and_parse(
 
     raise ValueError(f"Gemini failed after {retries} attempts: {last_error}")
 
-'''
 def call_gemini(prompt: str, retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     response = _call_and_parse(prompt, GeminiResponse, retries=retries)
     for meal in response.mealPlan:
-        actual_total_cost = 0
-        for item in meal.ingredientItems:
-            # Look up the REAL price from your JSON file
-            master_data = INGREDIENT_MASTER.get(item.ingredientId)
-            if master_data:
-                # Calculate the math in Python (Accurate!)
-                item_cost = master_data['price'] * item.quantity
-                actual_total_cost += item_cost
-        
-        # Overwrite the AI's potentially wrong math
-        meal.costPerServing = round(actual_total_cost / meal.servings, 2)
-        
+        meal.mealType = "Dinner"
+        meal.instructions = _normalize_instruction_text(meal.instructions)
     return response
+
 
 def generate_meal_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> GeminiResponse:
     prompt = build_prompt(preferences)
     return call_gemini(prompt, retries=retries)
-'''
 
 def generate_meal_name_plan(preferences: dict[str, Any], retries: int = DEFAULT_RETRIES) -> MealNamePlanResponse:
     prompt = build_name_plan_prompt(preferences)

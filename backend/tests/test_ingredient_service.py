@@ -57,64 +57,30 @@ def test_get_or_create_creates_new_ingredient():
             mock_db.collection().document().set.assert_called_once()
 
 def test_recalculate_meal_cost_raises_on_missing_ingredient():
-    mock_doc = MagicMock()
-    mock_doc.exists = False
-
-    mock_db = MagicMock()
-    mock_db.collection().document().get.return_value = mock_doc
-
     with patch("db.firestore_client.db", MagicMock()):
-        with patch("db.ingredient_service.db", mock_db):
+        with patch("db.ingredient_service.MASTER_PRICES", {}):
             from db.ingredient_service import recalculate_meal_cost
-            with pytest.raises(ValueError):
-                recalculate_meal_cost([{"ingredientId": "fake_id", "quantity": 100, "unit": "g"}])
+            cost = recalculate_meal_cost([{"ingredientId": "fake_id", "quantity": 100, "unit": "g"}])
+            assert cost == 0.0
 
 def test_recalculate_meal_cost_same_units():
-    mock_doc = MagicMock()
-    mock_doc.exists = True
-    mock_doc.to_dict.return_value = {
-        "price": {"value": 2.0, "unit": "g"}
-    }
-
-    mock_db = MagicMock()
-    mock_db.collection().document().get.return_value = mock_doc
-
     with patch("db.firestore_client.db", MagicMock()):
-        with patch("db.ingredient_service.db", mock_db):
+        with patch("db.ingredient_service.MASTER_PRICES", {"some_id": {"price": 2.0, "unit": "g", "name": "some"}}):
             from db.ingredient_service import recalculate_meal_cost
             cost = recalculate_meal_cost([{"ingredientId": "some_id", "quantity": 3, "unit": "g"}])
             assert cost == 6.0
 
-def test_recalculate_meal_cost_unit_conversion_g_to_kg():
-    mock_doc = MagicMock()
-    mock_doc.exists = True
-    mock_doc.to_dict.return_value = {
-        "price": {"value": 2.0, "unit": "kg"}
-    }
-
-    mock_db = MagicMock()
-    mock_db.collection().document().get.return_value = mock_doc
-
+def test_recalculate_meal_cost_resolves_firestore_style_id():
     with patch("db.firestore_client.db", MagicMock()):
-        with patch("db.ingredient_service.db", mock_db):
+        with patch("db.ingredient_service.MASTER_PRICES", {"chicken_breast": {"price": 2.0, "unit": "lb", "name": "chicken breast"}}):
             from db.ingredient_service import recalculate_meal_cost
-            # 500g converted to 0.5kg * $2.0/kg = $1.0
-            cost = recalculate_meal_cost([{"ingredientId": "some_id", "quantity": 500, "unit": "g"}])
-            assert cost == 1.0
+            cost = recalculate_meal_cost([{"ingredientId": "ingredient_chicken_breast_meat", "quantity": 2, "unit": "lb"}])
+            assert cost == 4.0
 
 def test_recalculate_meal_cost_clamps_extreme_values():
-    mock_doc = MagicMock()
-    mock_doc.exists = True
-    # Price is intentionally extreme and should be clamped.
-    mock_doc.to_dict.return_value = {
-        "price": {"value": 9999.0, "unit": "cup"}
-    }
-
-    mock_db = MagicMock()
-    mock_db.collection().document().get.return_value = mock_doc
-
     with patch("db.firestore_client.db", MagicMock()):
-        with patch("db.ingredient_service.db", mock_db):
+        # Price is intentionally extreme and should be clamped.
+        with patch("db.ingredient_service.MASTER_PRICES", {"some_id": {"price": 9999.0, "unit": "cup", "name": "some"}}):
             from db.ingredient_service import recalculate_meal_cost
             # Quantity is intentionally extreme and should be clamped to 8 cups.
             cost = recalculate_meal_cost([{"ingredientId": "some_id", "quantity": 1000, "unit": "cup"}])
